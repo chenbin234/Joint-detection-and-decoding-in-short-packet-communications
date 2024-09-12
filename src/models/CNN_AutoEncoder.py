@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from models.components.CNN_block import CNN_block
+from channel.AWGN_Channel import AWGN_Channel
 
 
 class Transmitter(nn.Module):
@@ -158,5 +159,22 @@ class Receiver(nn.Module):
         # input size = (batch_size, N_prime, L), output size = (batch_size, 1, k)
         x = self.decoder(x)
         x = self.sigmoid(x)
+
+        return x
+
+
+class CNN_AutoEncoder(nn.Module):
+    def __init__(self, M1, M2, N_prime, k, L, n, k_mod):
+        super(CNN_AutoEncoder, self).__init__()
+
+        self.transmitter = Transmitter(M1, M2, N_prime, k, L, n, k_mod)
+        self.receiver = Receiver(M1, M2, k_mod, L, N_prime)
+
+        self.channel = AWGN_Channel(SNR=10)
+
+    def forward(self, x):
+        x = self.transmitter(x)
+        x = self.channel(x)
+        x = self.receiver(x)
 
         return x
