@@ -12,6 +12,16 @@ from models.components.CNN_block import CNN_block
 from channel.AWGN_Channel import AWGN_Channel
 
 
+class ReshapeLayer(nn.Module):
+    def __init__(self, k_mod, n):
+        super(ReshapeLayer, self).__init__()
+        self.k_mod = k_mod
+        self.n = n
+
+    def forward(self, x):
+        return x.view(-1, self.k_mod, self.n)
+
+
 class Transmitter(nn.Module):
     def __init__(self, M1, M2, N_prime, k, L, n, k_mod):
         """
@@ -62,7 +72,8 @@ class Transmitter(nn.Module):
         self.encoding3_ELU = nn.ELU()
 
         # reshape the tensor (batch_size, N_prime, L) to (batch_size, k_mod, n)
-        self.reshape_layer = nn.Lambda(lambda x: x.view(-1, k_mod, n))
+        # self.reshape_layer = nn.Lambda(lambda x: x.view(-1, k_mod, n))
+        self.reshape_layer = ReshapeLayer(k_mod, n)
 
         # Modulator part
         # input size = (batch_size, k_mod, n), output size = (batch_size, M2, n)
@@ -131,7 +142,8 @@ class Receiver(nn.Module):
         self.demodulator2_linear = nn.Identity()
 
         # reshape the tensor (batch_size, k_mod, n) to (batch_size, N_prime, L)
-        self.reshape_layer = nn.Lambda(lambda x: x.view(-1, N_prime, L))
+        self.reshape_layer = ReshapeLayer(N_prime, L)
+        # self.reshape_layer = nn.Lambda(lambda x: x.view(-1, N_prime, L))
 
         # Decoder part
         # input size = (batch_size, N_prime, L), output size = (batch_size, 1, k)
@@ -170,11 +182,11 @@ class CNN_AutoEncoder(nn.Module):
         self.transmitter = Transmitter(M1, M2, N_prime, k, L, n, k_mod)
         self.receiver = Receiver(M1, M2, k_mod, L, N_prime)
 
-        self.channel = AWGN_Channel(SNR=10)
+        # self.channel = AWGN_Channel()
 
     def forward(self, x):
         x = self.transmitter(x)
-        x = self.channel(x)
+        x = AWGN_Channel(x, SNR_db=10)
         x = self.receiver(x)
 
         return x
