@@ -117,53 +117,46 @@ class Receiver(nn.Module):
         super(Receiver, self).__init__()
 
         # Demodulator part
-        demodulator_layers = []
-        for i in range(4):
-            demodulator_layers.append(
-                nn.Conv1d(
-                    in_channels=M2 if i > 0 else 1,
-                    out_channels=M2,
-                    kernel_size=5,
-                    padding="same",
-                )
-            )
-            demodulator_layers.append(nn.BatchNorm1d(M2))
-            demodulator_layers.append(nn.ELU())
-
-        demodulator_layers.append(
-            nn.Conv1d(in_channels=M2, out_channels=k_mod, kernel_size=5, padding="same")
+        # input size = (batch_size, 2, n), output size = (batch_size, M2, n)
+        self.demodulator1 = CNN_block(
+            in_channels=2, out_channels=M2, kernel_size=5, num_blocks=4, padding="same"
         )
-        demodulator_layers.append(nn.BatchNorm1d(k_mod))
-        demodulator_layers.append(
-            nn.Identity()
-        )  # Equivalent to 'linear' activation in TensorFlow
 
-        self.demodulator = nn.Sequential(*demodulator_layers)
-        self.reshape_layer = nn.Lambda(
-            lambda x: x.view(-1, L, N_prime)
-        )  # Reshape layer
+        # input size = (batch_size, M2, n), output size = (batch_size, k_mod, n)
+        self.demodulator2 = nn.Conv1d(
+            in_channels=M2, out_channels=k_mod, kernel_size=5, padding="same"
+        )
+        self.demodulator2_batchnorm = nn.BatchNorm1d(k_mod)
+        self.demodulator2_linear = nn.Identity()
+
+        # reshape the tensor (batch_size, k_mod, n) to (batch_size, N_prime, L)
+        self.reshape_layer = nn.Lambda(lambda x: x.view(-1, N_prime, L))
 
         # Decoder part
-        decoder_layers = []
-        for i in range(4):
-            decoder_layers.append(
-                nn.Conv1d(
-                    in_channels=M1 if i > 0 else k_mod,
-                    out_channels=M1,
-                    kernel_size=5,
-                    padding="same",
-                )
-            )
-            decoder_layers.append(nn.BatchNorm1d(M1))
-            decoder_layers.append(nn.ELU())
-
-        decoder_layers.append(nn.Conv1d(in_channels=M1, out_channels=1, kernel_size=1))
-        decoder_layers.append(nn.Sigmoid())
-
-        self.decoder = nn.Sequential(*decoder_layers)
+        # input size = (batch_size, N_prime, L), output size = (batch_size, 1, k)
+        #! in this case, we set L = k = 64
+        self.decoder = nn.Conv1d(
+            in_channels=N_prime, out_channels=1, kernel_size=1, padding="same"
+        )
+        # sigmoid activation function
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
-        x = self.demodulator(x)
+        # Demodulator part
+        # input size = (batch_size, 2, n), output size = (batch_size, M2, n)
+        x = self.demodulator1(x)
+
+        # input size = (batch_size, M2, n), output size = (batch_size, k_mod, n)
+        x = self.demodulator2(x)
+        x = self.demodulator2_batchnorm(x)
+        x = self.demodulator2_linear(x)
+
+        # Reshape the tensor (batch_size, k_mod, n) to (batch_size, N_prime, L)
         x = self.reshape_layer(x)
+
+        # Decoder part
+        # input size = (batch_size, N_prime, L), output size = (batch_size, 1, k)
         x = self.decoder(x)
+        x = self.sigmoid(x)
+
         return x
