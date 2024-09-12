@@ -169,3 +169,6 @@ test.py
 
 # .pt files (dataset files)
 *.pt
+
+# ignore wandb folder files
+wandb/
