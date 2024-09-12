@@ -166,3 +166,6 @@ cython_debug/
 
 # test files
 test.py
+
+# .pt files (dataset files)
+*.pt
