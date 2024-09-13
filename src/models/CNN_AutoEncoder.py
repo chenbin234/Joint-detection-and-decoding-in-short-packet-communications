@@ -90,7 +90,7 @@ class Transmitter(nn.Module):
         self.modulator2 = nn.Conv1d(
             in_channels=M2, out_channels=2, kernel_size=1, padding="same"
         )
-        self.modulator2_batchnorm = nn.BatchNorm1d(N_prime)
+        self.modulator2_batchnorm = nn.BatchNorm1d(2)
         self.modulator2_linear = nn.Identity()
 
     def forward(self, x):
@@ -146,10 +146,19 @@ class Receiver(nn.Module):
         # self.reshape_layer = nn.Lambda(lambda x: x.view(-1, N_prime, L))
 
         # Decoder part
-        # input size = (batch_size, N_prime, L), output size = (batch_size, 1, k)
+        # input size = (batch_size, N_prime, L), output size = (batch_size, M1, L)
+        self.decoder1 = CNN_block(
+            in_channels=N_prime,
+            out_channels=M1,
+            kernel_size=5,
+            num_blocks=4,
+            padding="same",
+        )
+
+        # input size = (batch_size, M1, L), output size = (batch_size, 1, k)
         #! in this case, we set L = k = 64
-        self.decoder = nn.Conv1d(
-            in_channels=N_prime, out_channels=1, kernel_size=1, padding="same"
+        self.decoder2 = nn.Conv1d(
+            in_channels=M1, out_channels=1, kernel_size=1, padding="same"
         )
         # sigmoid activation function
         self.sigmoid = nn.Sigmoid()
@@ -168,8 +177,11 @@ class Receiver(nn.Module):
         x = self.reshape_layer(x)
 
         # Decoder part
-        # input size = (batch_size, N_prime, L), output size = (batch_size, 1, k)
-        x = self.decoder(x)
+        # input size = (batch_size, N_prime, L), output size = (batch_size, M1, L)
+        x = self.decoder1(x)
+
+        # input size = (batch_size, M1, L), output size = (batch_size, 1, k)
+        x = self.decoder2(x)
         x = self.sigmoid(x)
 
         return x
