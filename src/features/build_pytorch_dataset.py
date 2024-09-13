@@ -13,10 +13,10 @@ class InfobitDataset(Dataset):
     and returns them as a PyTorch tensor.
 
     Attributes:
-        root (Path): The root directory of the dataset.
+        num_samples (int): The number of samples in the dataset.
+        k (int): The length of the information bits.
         device (torch.device): The device on which tensors will be loaded.
         data (torch.Tensor): The tensor containing the information bits.
-
 
     Raises:
         FileNotFoundError: If the specified root directory does not exist.
@@ -27,17 +27,12 @@ class InfobitDataset(Dataset):
 
     """
 
-    def __init__(self, root):
+    def __init__(self, num_samples, k):
 
-        root = Path(root)
-        if not root.exists():
-            raise FileNotFoundError(f"The {root} directory does not exist.")
-
-        self.root = Path(root)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        # Load the information bits of size (num_samples, 1, k)
-        self.data = torch.load(self.root, map_location=self.device)
+        # geberate a tensor of size (num_samples, 1, k), which each element is a random number equals 0 or 1
+        self.data = torch.randint(0, 2, (num_samples, 1, k), dtype=torch.float32)
 
     def __len__(self):
         """
