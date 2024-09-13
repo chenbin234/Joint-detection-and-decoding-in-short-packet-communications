@@ -4,12 +4,10 @@ This files contains the gengeral-purpose functions to train the model.
 """
 
 import torch
-import torchvision
-import numpy as np
-import os
-from torch.optim.lr_scheduler import StepLR
 import wandb
 import torch.nn as nn
+from torch.utils.data import DataLoader
+from features.build_pytorch_dataset import InfobitDataset
 
 
 def training_loop(
@@ -17,13 +15,16 @@ def training_loop(
     model,
     optimizer,
     loss_fn,
-    train_loader,
-    val_loader,
     num_epochs,
+    training_steps,
+    batch_size,
     start_epoch,
     print_every,
     save_model_name,
     save_every,
+    sigma2_min,
+    sigma2_max,
+    k,
 ):
     """
     Training loop for the transformer_encoder_decoder model.
@@ -33,13 +34,15 @@ def training_loop(
         model (torch.nn.Module): The model to be trained.
         optimizer (torch.optim.Optimizer): The optimizer used for training.
         loss_fn (torch.nn.Module): The loss function used for training.
-        train_loader (torch.utils.data.DataLoader): The data loader for the training dataset.
-        val_loader (torch.utils.data.DataLoader): The data loader for the validation dataset.
         num_epochs (int): The number of epochs to train the model.
+        training_steps (int): The number of training steps to train the model.
         start_epoch (int): The epoch to start training from.
         print_every (int): The interval for printing training progress.
         save_model_name (str): The name of the model to be saved.
         save_every (int): The interval for saving the model checkpoints.
+        sigma2_min (float): The minimum value of the noise variance.
+        sigma2_max (float): The maximum value of the noise variance.
+
 
     Returns:
         torch.nn.Module: The trained model.
@@ -58,26 +61,60 @@ def training_loop(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
+    # ramdonly generate a SNR_db list between sigma2_min and sigma2_max
+    # use 1 value for each epoch
+    training_snr_db = (
+        torch.rand((num_epochs, training_steps)) * (sigma2_max - sigma2_min)
+        + sigma2_min
+    )
+
     for epoch in range(start_epoch, num_epochs + 1):
 
-        # train for one epoch
-        if model_type == "CNN_AutoEncoder":
-            model, train_loss_batches = train_one_epoch(
-                model,
-                optimizer,
-                loss_fn,
-                train_loader,
-                val_loader,
-                device,
-                print_every,
-                model_type="Transformer",
-            )
-            # compute the validation loss
-            val_loss = CNN_AutoEncoder_validate(model, loss_fn, val_loader, device)
+        train_loss_batches_per_epoch = []
 
-        # calculate the loss for the specific epoch
-        train_loss_one_epoch = sum(train_loss_batches) / len(train_loss_batches)
-        val_loss_one_epoch = val_loss
+        for T in range(training_steps):
+
+            # generate random information bits of size (batch_size, 1, k)
+            train_dataset = InfobitDataset(num_samples=1e6, k=k)
+            val_dataset = InfobitDataset(num_samples=50000, k=k)
+
+            # create the train and val dataloaders
+            train_dataloader = DataLoader(
+                train_dataset, batch_size=batch_size, shuffle=True
+            )
+            val_dataloader = DataLoader(
+                val_dataset, batch_size=batch_size, shuffle=False
+            )
+
+            # train for one epoch
+            if model_type == "CNN_AutoEncoder":
+                model, train_loss_batches_per_training_step = train_one_training_step(
+                    model,
+                    optimizer,
+                    loss_fn,
+                    train_dataloader,
+                    val_dataloader,
+                    device,
+                    print_every,
+                    model_type="CNN_AutoEncoder",
+                    training_snr_db=training_snr_db[epoch - 1, T - 1],
+                )
+
+            # add the loss to the list, the list contains training_steps elements
+            train_loss_batches_per_epoch.append(
+                sum(train_loss_batches_per_training_step)
+                / len(train_loss_batches_per_training_step)
+            )
+
+        # compute the average training loss for the epoch
+        train_loss_one_epoch = sum(train_loss_batches_per_epoch) / len(
+            train_loss_batches_per_epoch
+        )
+
+        # compute the validation loss
+        val_loss_one_epoch = CNN_AutoEncoder_validate(
+            model, loss_fn, val_dataloader, device
+        )
 
         print(
             f"Epoch {epoch}/{num_epochs}: "
@@ -106,30 +143,20 @@ def training_loop(
                 f"./models/{save_model_name}/{save_model_name}_epoch{epoch}.pth",
             )
 
-            # print(f"Saving checkpoint [epoch {epoch}]")
-            # CHECKPOINT_PATH = f"./models/{save_model_name}/checkpoint.tar"
-            # # Save our checkpoint loc
-            # torch.save(
-            #     {
-            #         "epoch": epoch,
-            #         "model_state_dict": model.state_dict(),
-            #         "optimizer_state_dict": optimizer.state_dict(),
-            #         "loss": train_loss_one_epoch,
-            #     },
-            #     CHECKPOINT_PATH,
-            # )
-            # wandb.save(CHECKPOINT_PATH)  # saves checkpoint to wandb
-
-            # Save the model to wandb
-            # torch.onnx.export(model, torch.randn(1, 12, 256), f'./models/{save_model_name}/{save_model_name}_epoch{epoch}.onnx', verbose=True)
-            # wandb.save(f'./models/{save_model_name}/{save_model_name}_epoch{epoch}.onnx')
-
     print("Finished Training!")
     return model
 
 
-def train_one_epoch(
-    model, optimizer, loss_fn, train_loader, val_loader, device, print_every, model_type
+def train_one_training_step(
+    model,
+    optimizer,
+    loss_fn,
+    train_loader,
+    val_loader,
+    device,
+    print_every,
+    model_type,
+    training_snr_db,
 ):
     """
     Train the model for one epoch.
@@ -150,7 +177,7 @@ def train_one_epoch(
     #
     model = model.train()
 
-    train_loss_batches = []
+    train_loss_batches_per_training_step = []
     num_batches = len(train_loader)
 
     for batch_index, data in enumerate(train_loader, 1):
@@ -162,12 +189,12 @@ def train_one_epoch(
         optimizer.zero_grad()
 
         if model_type == "CNN_AutoEncoder":
-            predictions = model.forward(X)
+            predictions = model.forward(X, SNR_db=training_snr_db)
 
-        loss = loss_fn(predictions.reshape(X.size(0), -1), X.reshape(X.size(0), -1))
+        loss = loss_fn(predictions, X)
 
         # add the loss to the list
-        train_loss_batches.append(loss.item())
+        train_loss_batches_per_training_step.append(loss.item())
 
         # backpropagate the loss
         loss.backward()
@@ -189,11 +216,11 @@ def train_one_epoch(
 
             print(
                 f"\tBatch {batch_index}/{num_batches}: "
-                f"\tTrain loss: {sum(train_loss_batches[-print_every:])/print_every:.3f}, "
+                f"\tTrain loss: {sum(train_loss_batches_per_training_step[-print_every:])/print_every:.3f}, "
                 f"\tVal. loss: {val_loss:.3f}"
             )
 
-    return model, train_loss_batches
+    return model, train_loss_batches_per_training_step
 
 
 def CNN_AutoEncoder_validate(model, loss_fn, val_loader, device):
@@ -219,17 +246,14 @@ def CNN_AutoEncoder_validate(model, loss_fn, val_loader, device):
 
         for batch_index, data_val in enumerate(val_loader, 1):
 
-            # get the features and targets, X has shape (batch_size, 15, 256), y has shape (batch_size, 5, 256)
+            # get the features and targets, X has shape (batch_size, 1, k)
             X_val = data_val.to(device)
 
-            # prediction by the model, shape (batch_size, 1280), 5*256 = 1280
+            # prediction by the model, shape (batch_size, 1, k)
             predictions = model.forward(X_val)
 
             # compute the loss
-            batch_loss = loss_fn(
-                predictions.contiguous().view(X_val.size(0), -1),
-                X_val.view(X_val.size(0), -1),
-            )
+            batch_loss = loss_fn(predictions, X_val)
 
             # update the cummulative loss
             val_loss_cum += batch_loss.item()
