@@ -11,10 +11,8 @@ sys.path.append("src/")
 import os
 from train.train_utils import training_loop
 from models.CNN_AutoEncoder import CNN_AutoEncoder
-from features.build_pytorch_dataset import InfobitDataset
 import wandb
 from datetime import datetime
-from torch.utils.data import DataLoader
 import torch.optim as optim
 import torch.nn as nn
 import torch
@@ -23,18 +21,6 @@ import numpy as np
 
 
 def make(config):
-
-    # create the train and val datasets
-    train_dataset = InfobitDataset(config.train_dataset_path)
-    val_dataset = InfobitDataset(config.val_dataset_path)
-
-    # create the train and val dataloaders
-    train_dataloader = DataLoader(
-        train_dataset, batch_size=config.batch_size, shuffle=True
-    )
-    val_dataloader = DataLoader(
-        val_dataset, batch_size=config.batch_size, shuffle=False
-    )
 
     # Initialize the model
     model = CNN_AutoEncoder(
@@ -51,7 +37,7 @@ def make(config):
     loss_fn = nn.BCELoss()
     optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
 
-    return model, train_dataloader, val_dataloader, loss_fn, optimizer
+    return model, loss_fn, optimizer
 
 
 def model_pipeline(hyperparameters):
@@ -65,7 +51,7 @@ def model_pipeline(hyperparameters):
         config = wandb.config
 
         # make the model, data, and optimization problem
-        model, train_dataloader, val_dataloader, loss_fn, optimizer = make(config)
+        model, loss_fn, optimizer = make(config)
         print(model)
 
         # and use them to train the model
@@ -74,13 +60,16 @@ def model_pipeline(hyperparameters):
             model=model,
             optimizer=optimizer,
             loss_fn=loss_fn,
-            train_loader=train_dataloader,
-            val_loader=val_dataloader,
             num_epochs=config.epochs,
+            training_steps=config.training_steps,
+            batch_size=config.batch_size,
             start_epoch=1,
-            print_every=5,
+            print_every=None,
             save_model_name=config.save_model_name,
-            save_every=1,
+            save_every=10,
+            sigms2_min=config.sigma2_min,
+            sigma2_max=config.sigma2_max,
+            k=config.k,
         )
 
     return model
@@ -109,9 +98,10 @@ if __name__ == "__main__":
         model_type="CNN_AutoEncoder",
         trainable_parameters=0,
         train_dataset_path="data/processed/train_dataset_info_bits_2000_1_64.pt",
-        val_dataset_path="data/processed/val_dataset_info_bits_1000_1_64.pt",
-        epochs=4,
-        batch_size=64,
+        val_dataset_path="data/processed/val_dataset_info_bits_2000_1_64.pt",
+        epochs=10,
+        training_steps=10,
+        batch_size=32,
         learning_rate=1e-3,
         M1=200,
         M2=100,
@@ -120,6 +110,8 @@ if __name__ == "__main__":
         L=64,
         n=128,
         k_mod=2,
+        sigma2_min=1,
+        sigma2_max=5,
         save_model_name=save_model_name,
     )
 
