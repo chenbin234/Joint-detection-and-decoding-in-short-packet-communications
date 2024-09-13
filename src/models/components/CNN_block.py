@@ -23,7 +23,7 @@ class CNN_block(nn.Module):
             )
             layers.append(nn.BatchNorm1d(out_channels))
             layers.append(nn.ELU())
-            # in_channels = out_channels  # Update in_channels for the next block
+            in_channels = out_channels  # Update in_channels for the next block
 
         self.cnn_block = nn.Sequential(*layers)
 
