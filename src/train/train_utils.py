@@ -22,8 +22,8 @@ def training_loop(
     print_every,
     save_model_name,
     save_every,
-    sigma2_min,
-    sigma2_max,
+    snr_min,
+    snr_max,
     k,
 ):
     """
@@ -40,8 +40,8 @@ def training_loop(
         print_every (int): The interval for printing training progress.
         save_model_name (str): The name of the model to be saved.
         save_every (int): The interval for saving the model checkpoints.
-        sigma2_min (float): The minimum value of the noise variance.
-        sigma2_max (float): The maximum value of the noise variance.
+        snr_min (float): The minimum value of the snr.
+        snr_max (float): The maximum value of the snr.
 
 
     Returns:
@@ -61,11 +61,10 @@ def training_loop(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
-    # ramdonly generate a SNR_db list between sigma2_min and sigma2_max
+    # ramdonly generate a SNR_db list between snr_min and snr_max
     # use 1 value for each epoch
     training_snr_db = (
-        torch.rand((num_epochs, training_steps)) * (sigma2_max - sigma2_min)
-        + sigma2_min
+        torch.rand((num_epochs, training_steps)) * (snr_max - snr_min) + snr_min
     )
 
     for epoch in range(start_epoch, num_epochs + 1):
@@ -73,8 +72,8 @@ def training_loop(
         train_loss_batches_per_epoch = []
 
         # generate random information bits of size (batch_size, 1, k)
-        train_dataset = InfobitDataset(num_samples=1e6, k=k)
-        val_dataset = InfobitDataset(num_samples=50000, k=k)
+        train_dataset = InfobitDataset(num_samples=2000, k=k)
+        val_dataset = InfobitDataset(num_samples=2000, k=k)
 
         # create the train and val dataloaders
         train_dataloader = DataLoader(
@@ -96,6 +95,8 @@ def training_loop(
                     print_every,
                     model_type="CNN_AutoEncoder",
                     training_snr_db=training_snr_db[epoch - 1, T],
+                    snr_min=snr_min,
+                    snr_max=snr_max,
                 )
 
             # add the loss to the list, the list contains training_steps elements
@@ -111,7 +112,7 @@ def training_loop(
 
         # compute the validation loss
         val_loss_one_epoch = CNN_AutoEncoder_validate(
-            model, loss_fn, val_dataloader, device, sigma2_min, sigma2_max
+            model, loss_fn, val_dataloader, device, snr_min, snr_max
         )
 
         print(
@@ -155,8 +156,8 @@ def train_one_training_step(
     print_every,
     model_type,
     training_snr_db,
-    sigma2_min,
-    sigma2_max,
+    snr_min,
+    snr_max,
 ):
     """
     Train the model for one epoch.
@@ -210,7 +211,7 @@ def train_one_training_step(
             # compute the validation loss
             if model_type == "CNN_AutoEncoder":
                 val_loss = CNN_AutoEncoder_validate(
-                    model, loss_fn, val_loader, device, sigma2_min, sigma2_max
+                    model, loss_fn, val_loader, device, snr_min, snr_max
                 )
 
             # switch back to training mode (since when calling validate() the model is switched to eval mode)
@@ -230,8 +231,8 @@ def CNN_AutoEncoder_validate(
     loss_fn,
     val_loader,
     device,
-    sigma2_min,
-    sigma2_max,
+    snr_min,
+    snr_max,
 ):
     """
     Function to validate the model on the whole validation dataset.
@@ -248,8 +249,8 @@ def CNN_AutoEncoder_validate(
     val_loss_cum = 0
     val_loss_snr_list = []  # list to store the validation loss for each SNR_db value
 
-    # generate a list of SNR_db values between sigma2_min and sigma2_max for validation
-    val_snr_db = torch.arange(sigma2_min, sigma2_max + 0.5, 0.5)
+    # generate a list of SNR_db values between snr_min and snr_max for validation
+    val_snr_db = torch.arange(snr_min, snr_max + 0.5, 0.5)
 
     # switch to evaluation mode
     model.eval()
