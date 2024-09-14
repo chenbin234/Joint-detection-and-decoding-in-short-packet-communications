@@ -67,8 +67,8 @@ def model_pipeline(hyperparameters):
             print_every=None,
             save_model_name=config.save_model_name,
             save_every=10,
-            sigms2_min=config.sigma2_min,
-            sigma2_max=config.sigma2_max,
+            snr_min=config.snr_min,
+            snr_max=config.snr_max,
             k=config.k,
         )
 
@@ -89,7 +89,7 @@ if __name__ == "__main__":
 
     time = datetime.now().strftime("%Y%m%d_%H_%M_%S")
     # defining model save location
-    save_model_name = "CNN_AutoEncoder" + time
+    save_model_name = "CNN_AutoEncoder_" + time
     # create the folder if it doesn't exist
     if not os.path.exists(f"./models/{save_model_name}"):
         os.makedirs(f"./models/{save_model_name}")
@@ -99,8 +99,8 @@ if __name__ == "__main__":
         trainable_parameters=0,
         train_dataset_path="data/processed/train_dataset_info_bits_2000_1_64.pt",
         val_dataset_path="data/processed/val_dataset_info_bits_2000_1_64.pt",
-        epochs=10,
-        training_steps=10,
+        epochs=2,
+        training_steps=3,
         batch_size=32,
         learning_rate=1e-3,
         M1=200,
@@ -110,8 +110,8 @@ if __name__ == "__main__":
         L=64,
         n=128,
         k_mod=2,
-        sigma2_min=1,
-        sigma2_max=5,
+        snr_min=1,
+        snr_max=5,
         save_model_name=save_model_name,
     )
 
