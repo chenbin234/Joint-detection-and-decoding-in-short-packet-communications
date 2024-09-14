@@ -194,11 +194,12 @@ class CNN_AutoEncoder(nn.Module):
         self.transmitter = Transmitter(M1, M2, N_prime, k, L, n, k_mod)
         self.receiver = Receiver(M1, M2, k_mod, L, N_prime)
 
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         # self.channel = AWGN_Channel()
 
     def forward(self, x, SNR_db):
-        x = self.transmitter(x)
-        x = AWGN_Channel(x, SNR_db=SNR_db)
+        x = self.transmitter(x.to(self.device))
+        x = AWGN_Channel(x, SNR_db=SNR_db.to(self.device))
         x = self.receiver(x)
 
         return x
