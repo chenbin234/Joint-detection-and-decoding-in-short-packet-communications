@@ -196,9 +196,9 @@ class CNN_AutoEncoder(nn.Module):
 
         # self.channel = AWGN_Channel()
 
-    def forward(self, x):
+    def forward(self, x, SNR_db):
         x = self.transmitter(x)
-        x = AWGN_Channel(x, SNR_db=10)
+        x = AWGN_Channel(x, SNR_db=SNR_db)
         x = self.receiver(x)
 
         return x
