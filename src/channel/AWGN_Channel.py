@@ -21,8 +21,6 @@ def AWGN_Channel(transmitter_signal, SNR_db):
         torch.Tensor: The output signal.
     """
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
     # Convert SNR from dB to linear scale
     SNR = 10 ** (SNR_db / 10)
 
@@ -34,7 +32,7 @@ def AWGN_Channel(transmitter_signal, SNR_db):
 
     # Generate the noise
     noise = torch.randn(transmitter_signal.shape) * torch.sqrt(
-        torch.tensor(noise_power.to(device))
+        torch.tensor(noise_power)
     )
 
     # Output signal
