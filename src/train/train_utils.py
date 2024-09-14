@@ -72,19 +72,17 @@ def training_loop(
 
         train_loss_batches_per_epoch = []
 
+        # generate random information bits of size (batch_size, 1, k)
+        train_dataset = InfobitDataset(num_samples=1e6, k=k)
+        val_dataset = InfobitDataset(num_samples=50000, k=k)
+
+        # create the train and val dataloaders
+        train_dataloader = DataLoader(
+            train_dataset, batch_size=batch_size, shuffle=True
+        )
+        val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+
         for T in range(training_steps):
-
-            # generate random information bits of size (batch_size, 1, k)
-            train_dataset = InfobitDataset(num_samples=1e6, k=k)
-            val_dataset = InfobitDataset(num_samples=50000, k=k)
-
-            # create the train and val dataloaders
-            train_dataloader = DataLoader(
-                train_dataset, batch_size=batch_size, shuffle=True
-            )
-            val_dataloader = DataLoader(
-                val_dataset, batch_size=batch_size, shuffle=False
-            )
 
             # train for one epoch
             if model_type == "CNN_AutoEncoder":
@@ -97,7 +95,7 @@ def training_loop(
                     device,
                     print_every,
                     model_type="CNN_AutoEncoder",
-                    training_snr_db=training_snr_db[epoch - 1, T - 1],
+                    training_snr_db=training_snr_db[epoch - 1, T],
                 )
 
             # add the loss to the list, the list contains training_steps elements
@@ -113,13 +111,13 @@ def training_loop(
 
         # compute the validation loss
         val_loss_one_epoch = CNN_AutoEncoder_validate(
-            model, loss_fn, val_dataloader, device
+            model, loss_fn, val_dataloader, device, sigma2_min, sigma2_max
         )
 
         print(
             f"Epoch {epoch}/{num_epochs}: "
-            f"Train loss: {train_loss_one_epoch:.3f}, "
-            f"Val. loss: {val_loss_one_epoch:.3f}"
+            f"Train loss: {train_loss_one_epoch:.5f}, "
+            f"Val. loss: {val_loss_one_epoch:.5f}"
         )
 
         # Log the train_loss_one_epoch and val_loss_one_epoch to wandb
@@ -157,6 +155,8 @@ def train_one_training_step(
     print_every,
     model_type,
     training_snr_db,
+    sigma2_min,
+    sigma2_max,
 ):
     """
     Train the model for one epoch.
@@ -209,7 +209,9 @@ def train_one_training_step(
 
             # compute the validation loss
             if model_type == "CNN_AutoEncoder":
-                val_loss = CNN_AutoEncoder_validate(model, loss_fn, val_loader, device)
+                val_loss = CNN_AutoEncoder_validate(
+                    model, loss_fn, val_loader, device, sigma2_min, sigma2_max
+                )
 
             # switch back to training mode (since when calling validate() the model is switched to eval mode)
             model.train()
@@ -223,7 +225,14 @@ def train_one_training_step(
     return model, train_loss_batches_per_training_step
 
 
-def CNN_AutoEncoder_validate(model, loss_fn, val_loader, device):
+def CNN_AutoEncoder_validate(
+    model,
+    loss_fn,
+    val_loader,
+    device,
+    sigma2_min,
+    sigma2_max,
+):
     """
     Function to validate the model on the whole validation dataset.
 
@@ -237,6 +246,10 @@ def CNN_AutoEncoder_validate(model, loss_fn, val_loader, device):
         float: The average validation loss throughout the whole val dataset.
     """
     val_loss_cum = 0
+    val_loss_snr_list = []  # list to store the validation loss for each SNR_db value
+
+    # generate a list of SNR_db values between sigma2_min and sigma2_max for validation
+    val_snr_db = torch.arange(sigma2_min, sigma2_max + 0.5, 0.5)
 
     # switch to evaluation mode
     model.eval()
@@ -244,21 +257,26 @@ def CNN_AutoEncoder_validate(model, loss_fn, val_loader, device):
     # turn off gradients
     with torch.no_grad():
 
-        for batch_index, data_val in enumerate(val_loader, 1):
+        # loop over the validation dataset for each SNR_db value
+        for T_val in range(len(val_snr_db)):
 
-            # get the features and targets, X has shape (batch_size, 1, k)
-            X_val = data_val.to(device)
+            for batch_index, data_val in enumerate(val_loader, 1):
 
-            # prediction by the model, shape (batch_size, 1, k)
-            predictions = model.forward(X_val)
+                # get the features and targets, X has shape (batch_size, 1, k)
+                X_val = data_val.to(device)
 
-            # compute the loss
-            batch_loss = loss_fn(predictions, X_val)
+                # prediction by the model, shape (batch_size, 1, k)
+                predictions = model.forward(X_val, SNR_db=val_snr_db[T_val])
 
-            # update the cummulative loss
-            val_loss_cum += batch_loss.item()
+                # compute the loss
+                batch_loss = loss_fn(predictions, X_val)
 
-    return val_loss_cum / len(val_loader)
+                # update the cummulative loss
+                val_loss_cum += batch_loss.item()
+
+            val_loss_snr_list.append(val_loss_cum / len(val_loader))
+
+    return sum(val_loss_snr_list) / len(val_loss_snr_list)
 
 
 def count_parameters(model):
