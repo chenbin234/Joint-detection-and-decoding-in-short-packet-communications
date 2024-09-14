@@ -175,3 +175,5 @@ wandb/
 
 # ignore model files
 *.pth
+
+test.py
