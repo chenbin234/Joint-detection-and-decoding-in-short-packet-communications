@@ -172,3 +172,6 @@ test.py
 
 # ignore wandb folder files
 wandb/
+
+# ignore model files
+*.pth
