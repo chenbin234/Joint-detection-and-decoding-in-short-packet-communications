@@ -2,9 +2,9 @@
 
 #SBATCH -A NAISS2024-5-119  # find your project with the "projinfo" command
 #SBATCH -p alvis
-#SBATCH -t 00:20:00
+#SBATCH -t 00:20:00  # hours:minutes:seconds
 #SBATCH --gpus-per-node=A40:1
-#SBATCH -J "Data PyTorch"
+#SBATCH -J "Test"
 
 # Set-up environment
 ml purge
@@ -19,8 +19,8 @@ module load JupyterLab/3.5.0-GCCcore-11.3.0
 #jupyter notebook
 
 # Non-interactive
-ipython -c "%run data-pytorch.ipynb"
+# ipython -c "%run data-pytorch.ipynb"
 
 # or you can instead use
 #jupyter nbconvert --to python data-pytorch.ipynb &&
-#python data-pytorch.py
+python ./src/train/test1.py
