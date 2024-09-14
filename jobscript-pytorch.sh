@@ -8,7 +8,8 @@
 
 # Set-up environment
 ml purge
-module load PyTorch-bundle/1.12.1-foss-2022a-CUDA-11.7.0
+# module load PyTorch-bundle/1.12.1-foss-2022a-CUDA-11.7.0
+module load PyTorch-bundle/2.1.2-foss-2023a-CUDA-12.1.1
 module load wandb/0.13.4-GCCcore-11.3.0
 
 
