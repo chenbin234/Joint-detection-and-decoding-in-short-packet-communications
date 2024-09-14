@@ -20,9 +20,10 @@ def AWGN_Channel(transmitter_signal, SNR_db):
     Returns:
         torch.Tensor: The output signal.
     """
+    device = transmitter_signal.device
 
     # Convert SNR from dB to linear scale
-    SNR = 10 ** (SNR_db / 10)
+    SNR = 10 ** (SNR_db / 10).to(device)
 
     # Calculate the signal power
     signal_power = calculate_average_power(transmitter_signal)
