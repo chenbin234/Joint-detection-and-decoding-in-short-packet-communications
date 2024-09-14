@@ -32,7 +32,7 @@ class InfobitDataset(Dataset):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # geberate a tensor of size (num_samples, 1, k), which each element is a random number equals 0 or 1
-        self.data = torch.randint(0, 2, (num_samples, 1, k), dtype=torch.float32)
+        self.data = torch.randint(low=0, high=2, size=(int(num_samples), 1, k)).float()
 
     def __len__(self):
         """
