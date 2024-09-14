@@ -9,8 +9,8 @@
 # Set-up environment
 ml purge
 module load PyTorch-bundle/1.12.1-foss-2022a-CUDA-11.7.0
-module load matplotlib/3.5.2-foss-2022a
-module load JupyterLab/3.5.0-GCCcore-11.3.0
+module load wandb/0.13.4-GCCcore-11.3.0
+
 
 # Interactive (but prefer Alvis OnDemand for interactive jupyter sessions)
 #jupyter lab
@@ -23,4 +23,4 @@ module load JupyterLab/3.5.0-GCCcore-11.3.0
 
 # or you can instead use
 #jupyter nbconvert --to python data-pytorch.ipynb &&
-python ./src/train/test1.py
+python3 ./src/train/train_CNN_AutoEncoder_AWGN.py
