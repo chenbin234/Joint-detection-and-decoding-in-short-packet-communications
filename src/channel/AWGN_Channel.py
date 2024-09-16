@@ -32,8 +32,11 @@ def AWGN_Channel(transmitter_signal, SNR_db):
     noise_power = signal_power / SNR
 
     # Generate the noise
-    noise = torch.randn(transmitter_signal.shape) * torch.sqrt(
-        torch.tensor(noise_power)
+    # noise = torch.randn(transmitter_signal.shape).to(device) * torch.sqrt(
+    #     torch.tensor(noise_power)
+    # )
+    noise = torch.randn(transmitter_signal.shape).to(device) * torch.sqrt(
+        noise_power.clone().detach()
     )
 
     # Output signal
