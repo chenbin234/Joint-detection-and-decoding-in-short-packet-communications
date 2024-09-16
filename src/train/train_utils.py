@@ -72,8 +72,12 @@ def training_loop(
         train_loss_batches_per_epoch = []
 
         # generate random information bits of size (batch_size, 1, k)
-        train_dataset = InfobitDataset(num_samples=2000, k=k)
-        val_dataset = InfobitDataset(num_samples=2000, k=k)
+        train_dataset = InfobitDataset(num_samples=1e6, k=k)
+        val_dataset = InfobitDataset(num_samples=5e4, k=k)
+
+        if epoch == 1:
+            print("number of training samples: ", len(train_dataset))
+            print("number of validation samples: ", len(val_dataset))
 
         # create the train and val dataloaders
         train_dataloader = DataLoader(
