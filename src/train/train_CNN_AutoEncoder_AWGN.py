@@ -97,8 +97,6 @@ if __name__ == "__main__":
     config = dict(
         model_type="CNN_AutoEncoder",
         trainable_parameters=0,
-        train_dataset_path="data/processed/train_dataset_info_bits_2000_1_64.pt",
-        val_dataset_path="data/processed/val_dataset_info_bits_2000_1_64.pt",
         epochs=100,
         training_steps=20,
         batch_size=512,
