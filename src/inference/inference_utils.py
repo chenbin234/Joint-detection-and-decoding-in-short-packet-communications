@@ -14,7 +14,6 @@ def inference_loop(
     model_type,
     model,
     test_dataloader,
-    batch_size,
     test_snr_min,
     test_snr_max,
     k,

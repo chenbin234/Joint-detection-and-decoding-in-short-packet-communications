@@ -12,6 +12,7 @@ import os
 from inference.inference_utils import inference_loop
 from models.CNN_AutoEncoder import CNN_AutoEncoder
 from features.build_pytorch_dataset import InfobitDataset
+from torch.utils.data import DataLoader
 import wandb
 from datetime import datetime
 import torch.optim as optim
@@ -66,17 +67,9 @@ def model_pipeline(hyperparameters):
         model = inference_loop(
             model_type=config.model_type,
             model=model,
-            optimizer=optimizer,
-            loss_fn=loss_fn,
-            num_epochs=config.epochs,
-            training_steps=config.training_steps,
-            batch_size=config.batch_size,
-            start_epoch=1,
-            print_every=None,
-            save_model_name=config.save_model_name,
-            save_every=10,
-            snr_min=config.snr_min,
-            snr_max=config.snr_max,
+            test_dataloader=test_dataloader,
+            test_snr_min=config.snr_min,
+            test_snr_max=config.snr_max,
             k=config.k,
         )
 
@@ -95,11 +88,14 @@ if __name__ == "__main__":
     # Initialize Weights and Biases
     wandb.login()
 
+    # defining model save location
+    save_model_folder = "CNN_AutoEncoder_20240916_16_28_11"
+
     config = dict(
         model_type="CNN_AutoEncoder",
-        description="CNN AutoEncoder model for short packet communication",
-        save_model_folder="CNN_AutoEncoder_",  # the folder that the model be saved
-        model_file=f"models/{save_model_folder}/{save_model_folder + '_epoch3'}.pth",
+        description="debugging",
+        save_model_folder=save_model_folder,  # the folder that the model be saved
+        model_file=f"./models/{save_model_folder}/{save_model_folder + '_epoch100'}.pth",
         batch_size=512,
         learning_rate=1e-3,
         M1=200,
