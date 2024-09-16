@@ -246,7 +246,7 @@ def CNN_AutoEncoder_validate(
     Returns:
         float: The average validation loss throughout the whole val dataset.
     """
-    val_loss_cum = 0
+    # val_loss_cum = 0
     val_loss_snr_list = []  # list to store the validation loss for each SNR_db value
 
     # generate a list of SNR_db values between snr_min and snr_max for validation
@@ -260,6 +260,8 @@ def CNN_AutoEncoder_validate(
 
         # loop over the validation dataset for each SNR_db value
         for T_val in range(len(val_snr_db)):
+
+            val_loss_cum = 0
 
             for batch_index, data_val in enumerate(val_loader, 1):
 
