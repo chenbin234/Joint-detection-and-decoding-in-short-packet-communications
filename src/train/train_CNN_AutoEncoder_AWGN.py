@@ -101,7 +101,7 @@ if __name__ == "__main__":
         val_dataset_path="data/processed/val_dataset_info_bits_2000_1_64.pt",
         epochs=100,
         training_steps=20,
-        batch_size=32,
+        batch_size=512,
         learning_rate=1e-3,
         M1=200,
         M2=100,
