@@ -98,7 +98,7 @@ if __name__ == "__main__":
         model_type="CNN_AutoEncoder",
         trainable_parameters=0,
         epochs=100,
-        training_steps=2000,
+        training_steps=20,
         batch_size=500,
         learning_rate=1e-3,
         M1=200,
