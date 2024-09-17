@@ -95,13 +95,13 @@ def inference_loop(
     for i in range(len(inference_snr_db)):
 
         log_dict = {
-            f"BER v.s. SNR (AWGN)": infer_ber_list[i],
+            f"BER v.s. SNR (AWGN)": 10 * torch.log10(infer_ber_list[i]),
             "custom_step": inference_snr_db[i],
         }
         wandb.log(log_dict)
 
         log_dict = {
-            f"BLER v.s. SNR (AWGN)": infer_bler_list[i],
+            f"BLER v.s. SNR (AWGN)": 10 * torch.log10(infer_bler_list[i]),
             "custom_step": inference_snr_db[i],
         }
         wandb.log(log_dict)
