@@ -66,7 +66,7 @@ def model_pipeline(hyperparameters):
             start_epoch=1,
             print_every=None,
             save_model_name=config.save_model_name,
-            save_every=10,
+            save_every=25,
             snr_min=config.snr_min,
             snr_max=config.snr_max,
             k=config.k,
