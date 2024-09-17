@@ -63,29 +63,39 @@ def training_loop(
 
     # ramdonly generate a SNR_db list between snr_min and snr_max
     # use 1 value for each epoch
-    training_snr_db = (
-        torch.rand((num_epochs, training_steps)) * (snr_max - snr_min) + snr_min
-    )
+    training_snr_db = torch.rand(num_epochs) * (snr_max - snr_min) + snr_min
 
     for epoch in range(start_epoch, num_epochs + 1):
 
         train_loss_batches_per_epoch = []
 
-        # generate random information bits of size (batch_size, 1, k)
-        train_dataset = InfobitDataset(num_samples=1e6, k=k)
-        val_dataset = InfobitDataset(num_samples=5e4, k=k)
+        # # generate random information bits of size (batch_size, 1, k)
+        # train_dataset = InfobitDataset(num_samples=1e3, k=k)
+        # val_dataset = InfobitDataset(num_samples=1e3, k=k)
 
-        if epoch == 1:
-            print("number of training samples: ", len(train_dataset))
-            print("number of validation samples: ", len(val_dataset))
+        # if epoch == 1:
+        #     print("number of training samples: ", len(train_dataset))
+        #     print("number of validation samples: ", len(val_dataset))
 
-        # create the train and val dataloaders
-        train_dataloader = DataLoader(
-            train_dataset, batch_size=batch_size, shuffle=True
-        )
-        val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+        # # create the train and val dataloaders
+        # train_dataloader = DataLoader(
+        #     train_dataset, batch_size=batch_size, shuffle=True
+        # )
+        # val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
         for T in range(training_steps):
+
+            # generate random information bits of size (batch_size, 1, k)
+            train_dataset = InfobitDataset(num_samples=500, k=k)
+            val_dataset = InfobitDataset(num_samples=500, k=k)
+
+            # create the train and val dataloaders
+            train_dataloader = DataLoader(
+                train_dataset, batch_size=batch_size, shuffle=True
+            )
+            val_dataloader = DataLoader(
+                val_dataset, batch_size=batch_size, shuffle=False
+            )
 
             # train for one epoch
             if model_type == "CNN_AutoEncoder":
@@ -98,7 +108,7 @@ def training_loop(
                     device,
                     print_every,
                     model_type="CNN_AutoEncoder",
-                    training_snr_db=training_snr_db[epoch - 1, T],
+                    training_snr_db=training_snr_db[epoch - 1],
                     snr_min=snr_min,
                     snr_max=snr_max,
                 )
