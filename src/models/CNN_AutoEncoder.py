@@ -1,6 +1,7 @@
 # This file contains the implementation of the CNN AutoEncoder model using PyTorch (Xi Zhang's Master Thesis)
 # The model consists of an Transmitter and a Receiver
 # refer to the paper for more details: https://arxiv.org/abs/2306.09258
+#! Note that the model does not include synchronization and Equation
 
 import sys
 
