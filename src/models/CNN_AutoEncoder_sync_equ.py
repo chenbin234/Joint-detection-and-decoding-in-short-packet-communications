@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from models.components.CNN_block import CNN_block
-from channel.Block_Fading_Channel import Block_Fading_Channel
+from channel.Block_Fading_Channel import Block_fading_channel
 
 
 class ReshapeLayer(nn.Module):
@@ -281,17 +281,68 @@ class Receiver(nn.Module):
 
 
 class CNN_AutoEncoder(nn.Module):
-    def __init__(self, M1, M2, N_prime, k, L, n, k_mod):
+    def __init__(self, M1, M2, N_prime, k, L, n, k_mod, tp, N_up, nb, delay_max):
         super(CNN_AutoEncoder, self).__init__()
+
+        self.tp = tp
+        self.N_up = N_up
+        self.nb = nb
+        self.delay_max = delay_max
 
         self.transmitter = Transmitter(M1, M2, N_prime, k, L, n, k_mod)
         self.receiver = Receiver(M1, M2, k_mod, L, N_prime)
 
-        # self.channel = AWGN_Channel()
+    def forward(self, x, SNR_db, training=True):
 
-    def forward(self, x, SNR_db):
+        # Transmitter part
+        # input size = (batch_size, 1, k), output size = (batch_size, 2, n)
         x = self.transmitter(x)
-        x = Block_Fading_Channel(x, SNR_db=SNR_db)
-        x = self.receiver(x, training=True)
 
-        return x
+        # randomly generate delay for each message
+        # delay has the size (batch_size, 1),
+        # delay_onehot has the size (batch_size, 1, delay_max + 1)
+        delay, delay_onehot = generate_random_delay(
+            batch_size=x.shape[0], delay_max=self.delay_max
+        )
+
+        # Channel part (including upsampling and pulse shaping)
+        # input size = (batch_size, 2, n)
+        # output size = (batch_size, nb, n // nb * N_up + delay_max, 2)
+        #! Todo: probably miss power normalization
+        x = Block_fading_channel(
+            transmitted_signal=x,
+            tp=self.tp,
+            N_up=self.N_up,
+            nb=self.nb,
+            delay=delay,
+            SNR_db=SNR_db,
+            delay_max=self.delay_max,
+        )
+
+        # Receiver part
+        # input size = (batch_size, nb, n // nb * N_up + delay_max, 2)
+        if training:
+
+            # output size
+            # estimated_delay: (batch_size, 1, delay_max + 1)
+            # x: (batch_size, 1, k)
+            estimated_delay, x = self.receiver(x, training=True)
+
+            return estimated_delay, x
+
+        else:
+            # output size = (batch_size, 1, k)
+            x = self.receiver(x, training=False)
+
+            return x
+
+
+def generate_random_delay(batch_size, delay_max):
+    # generate random delay for each message of size (batch_size, 1), the delay is uniform distributed in [0, delay_max]
+    delay = torch.randint(low=0, high=delay_max + 1, size=(batch_size, 1))
+
+    # convert delay to one-hot encoding
+    # delay_onehot has the size (batch_size, 1, delay_max + 1)
+    delay_onehot = F.one_hot(delay, num_classes=delay_max + 1)
+
+    return delay, delay_onehot
