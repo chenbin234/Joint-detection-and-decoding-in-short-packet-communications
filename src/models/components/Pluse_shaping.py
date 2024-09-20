@@ -11,7 +11,7 @@ def pulse_shaping(x, tp, N_up):
     Perform pulse shaping (and upsampling) on the input signal.
 
     Args:
-        x (torch.Tensor): Input tensor of shape (batch_size, num_symbols_per_block), in this case, num_symbols = n/nb (since the transmitted signal was splitted).
+        x (torch.Tensor, complex): Input tensor of shape (batch_size, num_symbols_per_block), in this case, num_symbols = n/nb (since the transmitted signal was splitted).
         tp (float): Pulse duration.
         N_up (int): Upsampling factor.
 
