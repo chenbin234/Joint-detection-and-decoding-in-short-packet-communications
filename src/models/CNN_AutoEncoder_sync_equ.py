@@ -207,7 +207,7 @@ class DEC_CNN_last_block(nn.Module):
 
 
 class Sync_Block(nn.Module):
-    def __init__(self, in_channels, M2, num_blocks, dmax):
+    def __init__(self, in_channels, M2, dmax, num_blocks=5):
         super(Sync_Block, self).__init__()
 
         self.cnn_block1 = CNN_block(
@@ -228,7 +228,9 @@ class Sync_Block(nn.Module):
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, x):
-        # input size = (batch_size, 2, n), output size = (batch_size, M2, n) ???
+
+        # input size = (batch_size, nb, n // nb * N_up + delay_max, 2)
+        # output size = (batch_size, 1, delay_max + 1)
         x = self.cnn_block1(x)
 
         # input size = (batch_size, M2, n), output size = (batch_size, F, n)
@@ -254,10 +256,13 @@ class Receiver(nn.Module):
 
         self.dec_block = DEC_CNN_block(in_channels=2, M1=2, F=2, num_blocks=4)
 
-    def forward(self, x, training=True):
+    def forward(self, x, num_iteration, training=True):
 
         if training:
+
             # Sync Block
+            # input size = (batch_size, nb, n // nb * N_up + delay_max, 2)
+            # output size = (batch_size, 1, delay_max + 1)
             estimated_delay = self.sync_block(x)
 
             # EQ Block
