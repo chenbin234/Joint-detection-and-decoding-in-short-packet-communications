@@ -14,7 +14,8 @@ def training_loop(
     model_type,
     model,
     optimizer,
-    loss_fn,
+    loss_fn_sync,
+    loss_fn_decoding,
     num_epochs,
     training_steps,
     batch_size,
@@ -49,7 +50,8 @@ def training_loop(
     """
 
     # Tell wandb to watch what the model gets up to: gradients, weights, and more!
-    wandb.watch(model, loss_fn, log="all", log_freq=5000)
+    wandb.watch(model, loss_fn_sync, log="all", log_freq=5000)
+    wandb.watch(model, loss_fn_decoding, log="all", log_freq=5000)
 
     # record the number of trainable parameters in the model
     wandb.config.update(
@@ -76,8 +78,8 @@ def training_loop(
         val_dataset = InfobitDataset(num_samples=1e4, k=k)
 
         if epoch == 1:
-            print("number of training samples: ", len(train_dataset))
-            print("number of validation samples: ", len(val_dataset))
+            print("number of training samples per epoch: ", len(train_dataset))
+            print("number of validation samples per epoch: ", len(val_dataset))
 
         # create the train and val dataloaders
         train_dataloader = DataLoader(
@@ -100,16 +102,17 @@ def training_loop(
             # )
 
             # train for one epoch
-            if model_type == "CNN_AutoEncoder":
+            if model_type == "CNN_AutoEncoder_sync_equ":
                 model, train_loss_batches_per_training_step = train_one_training_step(
                     model,
                     optimizer,
-                    loss_fn,
+                    loss_fn_sync,
+                    loss_fn_decoding,
                     train_dataloader,
                     val_dataloader,
                     device,
                     print_every,
-                    model_type="CNN_AutoEncoder",
+                    model_type="CNN_AutoEncoder_sync_equ",
                     training_snr_db=training_snr_db[epoch - 1, T],
                     snr_min=snr_min,
                     snr_max=snr_max,
@@ -128,7 +131,13 @@ def training_loop(
 
         # compute the validation loss
         val_loss_one_epoch = CNN_AutoEncoder_validate(
-            model, loss_fn, val_dataloader, device, snr_min, snr_max
+            model,
+            loss_fn_sync,
+            loss_fn_decoding,
+            val_dataloader,
+            device,
+            snr_min,
+            snr_max,
         )
 
         print(
@@ -165,7 +174,8 @@ def training_loop(
 def train_one_training_step(
     model,
     optimizer,
-    loss_fn,
+    loss_fn_sync,
+    loss_fn_decoding,
     train_loader,
     val_loader,
     device,
