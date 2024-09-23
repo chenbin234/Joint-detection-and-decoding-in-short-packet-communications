@@ -133,6 +133,7 @@ if __name__ == "__main__":
         tp=5,  # period of the pulse
         snr_min=2,
         snr_max=20,
+        alpha=0.01,  # factor of the sync loss in the total loss
         save_model_name=save_model_name,
     )
 
