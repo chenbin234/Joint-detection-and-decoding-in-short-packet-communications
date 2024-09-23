@@ -12,6 +12,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from models.components.CNN_block import CNN_block
 from channel.Block_Fading_Channel import Block_fading_channel
+from models.components.cutoff import cutoff
 
 
 class ReshapeLayer(nn.Module):
@@ -127,11 +128,11 @@ class Transmitter(nn.Module):
 
 
 class EQ_CNN_block(nn.Module):
-    def __init__(self, in_channels, M2, F, num_blocks):
+    def __init__(self, M2, F, num_blocks=5):
         super(EQ_CNN_block, self).__init__()
 
         self.cnn_block1 = CNN_block(
-            in_channels=in_channels,
+            in_channels=M2,
             out_channels=M2,
             kernel_size=5,
             num_blocks=num_blocks,
@@ -142,7 +143,7 @@ class EQ_CNN_block(nn.Module):
         )
 
     def forward(self, x):
-        # input size = (batch_size, 2, n), output size = (batch_size, M2, n)
+        # input size = (batch_size, M2, n), output size = (batch_size, M2, n)
         x = self.cnn_block1(x)
 
         # input size = (batch_size, M2, n), output size = (batch_size, F, n)
@@ -152,11 +153,11 @@ class EQ_CNN_block(nn.Module):
 
 
 class DEC_CNN_block(nn.Module):
-    def __init__(self, in_channels, M1, F, num_blocks):
+    def __init__(self, M1, F, num_blocks=5):
         super(EQ_CNN_block, self).__init__()
 
         self.cnn_block1 = CNN_block(
-            in_channels=in_channels,
+            in_channels=F,
             out_channels=M1,
             kernel_size=5,
             num_blocks=num_blocks,
@@ -167,148 +168,236 @@ class DEC_CNN_block(nn.Module):
         )
 
     def forward(self, x):
-        # input size = (batch_size, 2, n), output size = (batch_size, M2, n)
+        # input size = (batch_size, F, n), output size = (batch_size, M1, n)
         x = self.cnn_block1(x)
 
-        # input size = (batch_size, M2, n), output size = (batch_size, F, n)
+        # input size = (batch_size, M1, n), output size = (batch_size, F, n)
         x = self.cnn_block2(x)
 
         return x
 
 
 class DEC_CNN_last_block(nn.Module):
-    def __init__(self, in_channels, M1, F, L, k, num_blocks):
+    def __init__(self, M1, F, n, k, num_blocks=5):
         super(EQ_CNN_block, self).__init__()
 
         self.cnn_block1 = CNN_block(
-            in_channels=in_channels,
+            in_channels=F,
             out_channels=M1,
             kernel_size=5,
             num_blocks=num_blocks,
             padding="same",
         )
 
-        # input size = (batch_size, M1, L), output size = (batch_size, 1, k) ??
+        # input size = (batch_size, M1, n), output size = (batch_size, M1*n)
         self.flatten = nn.Flatten()
 
-        self.decoder_ouput = nn.Linear(in_features=M1 * L, out_features=k)
+        self.decoder_ouput = nn.Linear(in_features=M1 * n, out_features=k)
 
     def forward(self, x):
-        # input size = (batch_size, 2, n), output size = (batch_size, M2, n)
+        # input size = (batch_size, F, n), output size = (batch_size, M1, n)
         x = self.cnn_block1(x)
 
         # flattten layer
+        # input size = (batch_size, M1, n), output size = (batch_size, M1*n)
         x = self.flatten(x)
 
         # final decoder output
+        # input size = (batch_size, M1*n), output size = (batch_size, k)
         x = self.decoder_ouput(x)
+
+        # add one dimension to the output (second dimension) to make sure the output has the shape (batch_size, 1, k)
+        x = x.unsqueeze(1)
 
         return x
 
 
 class Sync_Block(nn.Module):
-    def __init__(self, in_channels, M2, dmax, num_blocks=5):
+    """
+    Synchronization block for a CNN AutoEncoder.
+
+    Args:
+        n (int): number of complex channel uses.
+        N_up (int): Upsampling factor.
+        delay_max (int): Maximum delay.
+        nb (int): Number of blocks.
+        num_blocks (int, optional): Number of CNN blocks. Default is 5.
+
+    Attributes:
+        cnn_block1 (CNN_block): The first CNN block with specified parameters.
+        cnn_block2 (nn.Conv1d): A 1D convolutional layer.
+        flatten (nn.Flatten): A flattening layer.
+        sync_output (nn.Linear): A linear layer for synchronization output.
+        softmax (nn.Softmax): A softmax layer for output normalization.
+
+    Methods:
+        forward(x):
+            Forward pass of the synchronization block.
+
+            Args:
+                x (torch.Tensor): Input tensor of shape (batch_size, nb, n // nb * N_up + delay_max, 2).
+
+            Returns:
+                torch.Tensor: Output tensor of shape (batch_size, delay_max + 1).
+    """
+
+    def __init__(self, n, N_up, delay_max, nb, num_blocks=5):
         super(Sync_Block, self).__init__()
 
         self.cnn_block1 = CNN_block(
-            in_channels=in_channels,
-            out_channels=M2,
+            in_channels=2,
+            out_channels=100,
             kernel_size=5,
             num_blocks=num_blocks,
             padding="same",
         )
         self.cnn_block2 = nn.Conv1d(
-            in_channels=M2, out_channels=1, kernel_size=1, padding="same"
+            in_channels=100, out_channels=1, kernel_size=1, padding="same"
         )
 
         self.flatten = nn.Flatten()
 
-        self.sync_output = nn.Linear(in_features=dmax, out_features=dmax + 1)
+        self.sync_output = nn.Linear(
+            in_features=n * N_up + delay_max * nb, out_features=delay_max + 1
+        )
 
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, x):
 
-        # input size = (batch_size, nb, n // nb * N_up + delay_max, 2)
-        # output size = (batch_size, 1, delay_max + 1)
+        # reshape the input to (batch_size, 2, P), where P = n * N_up + delay_max * nb
+        x = x.view(x.size(0), 2, -1)
+
+        # input size = (batch_size, 2, P)
+        # output size = (batch_size, 100, P)
         x = self.cnn_block1(x)
 
-        # input size = (batch_size, M2, n), output size = (batch_size, F, n)
+        # input size = (batch_size, 100, P), output size = (batch_size, 1, P)
         x = self.cnn_block2(x)
 
         # flatten layer
         x = self.flatten(x)
 
         # final sync output
+        # input size = (batch_size, P), output size = (batch_size, delay_max + 1)
         x = self.sync_output(x)
+
+        # softmax layer
+        # input size = (batch_size, delay_max + 1), output size = (batch_size, delay_max + 1)
         x = self.softmax(x)
 
         return x
 
 
 class Receiver(nn.Module):
-    def __init__(self, M1, M2, k_mod, L, N_prime):
+    def __init__(
+        self,
+        M1,
+        M2,
+        F,
+        n,
+        k,
+        N_up,
+        delay_max,
+        nb,
+    ):
         super(Receiver, self).__init__()
 
-        self.sync_block = Sync_Block(in_channels=2, M2=2, num_blocks=4, dmax=4)
+        # Sync Block
+        # input size = (batch_size, 2, nb, n // nb * N_up + delay_max)
+        # output size = (batch_size, 1, delay_max + 1)
+        self.sync_block = Sync_Block(n, N_up, delay_max, nb, num_blocks=5)
 
-        self.eq_block = EQ_CNN_block(in_channels=2, M2=2, F=2, num_blocks=4)
+        # input size = (batch_size, 2, nb, n // nb * N_up + delay_max), output size = (batch_size, 2, n * N_up)
+        self.dec_input = nn.Sequential(
+            nn.Conv1d(in_channels=2, out_channels=M2, kernel_size=5, stride=N_up),
+            nn.BatchNorm1d(M2),
+            nn.ELU(),
+        )
 
-        self.dec_block = DEC_CNN_block(in_channels=2, M1=2, F=2, num_blocks=4)
+        # input size = (batch_size, M2, n), output size = (batch_size, F, n)
+        self.eq_block = EQ_CNN_block(M2, F)
 
-    def forward(self, x, num_iteration, training=True):
+        # input size = (batch_size, F, n), output size = (batch_size, M1, n)
+        self.dec_block = DEC_CNN_block(M1, F)
 
+        # input size = (batch_size, F, n), output size = (batch_size, 1, k)
+        self.dec_last_block = DEC_CNN_last_block(M1, F, n, k)
+
+    def forward(self, x_delay, true_delay_onehot, num_iteration, training=True):
+        # Sync Block
+        # input size = (batch_size, 2, nb, n // nb * N_up + delay_max)
+        # output size = (batch_size, 1, delay_max + 1)
+        estimated_delay = self.sync_block(x_delay)
+
+        # cutoff & concatenate the received signal
+        # input size = (batch_size, 2, nb, n // nb * N_up + delay_max)
+        # output size = (batch_size, 2, n * N_up)
         if training:
 
-            # Sync Block
-            # input size = (batch_size, nb, n // nb * N_up + delay_max, 2)
-            # output size = (batch_size, 1, delay_max + 1)
-            estimated_delay = self.sync_block(x)
+            y_delay_removed = cutoff(x_delay, estimated_delay)
 
-            # EQ Block
-            x = self.eq_block(x)
-
-            # DEC Block
-            x = self.dec_block(x)
-
-            return estimated_delay, x
         else:
-            # Sync Block
-            x = self.sync_block(x)
+            y_delay_removed = cutoff(x_delay, true_delay_onehot)
 
-            # EQ Block
-            x = self.eq_block(x)
+        # input size = (batch_size, 2, n * N_up), output size = (batch_size, M2, n)
+        x = self.dec_input(x)
 
-            # DEC Block
-            x = self.dec_block(x)
+        # initiate i_c
+        i_c_pri = 0
 
-            return x
+        # iterative EQ-DEC block
+        for i in range(num_iteration):
+
+            # EQ-CNN block
+            # input size = (batch_size, M2, n), output size = (batch_size, F, n)
+            i_c = self.eq_block(y_delay_removed)
+
+            # update i_c
+            i_c = i_c - i_c_pri
+
+            # DEC-CNN block
+            # input size = (batch_size, F, n), output size = (batch_size, M1, n)
+            i_b = self.dec_block(i_c)
+
+            # update i_c_pri
+            i_c_pri = i_b - i_c
+
+        #! last iteration
+        # EQ-CNN last block
+        # input size = (batch_size, M2, n), output size = (batch_size, F, n)
+        i_c = self.eq_block(y_delay_removed)
+
+        # update i_c
+        i_c = i_c - i_c_pri
+
+        # DEC-CNN last block
+        # input size = (batch_size, F, n), output size = (batch_size, 1, k)
+        y_decoded = self.dec_last_block()
+
+        return estimated_delay, y_decoded
 
 
 class CNN_AutoEncoder(nn.Module):
-    def __init__(self, M1, M2, N_prime, k, L, n, k_mod, tp, N_up, nb, delay_max):
+    def __init__(self, M1, M2, k, N, L, k_mod, F, delay_max, nb, N_up, tp):
         super(CNN_AutoEncoder, self).__init__()
 
+        self.k_prime = k / L
+        self.N_prime = N / L
+        self.n = N / k_mod
         self.tp = tp
         self.N_up = N_up
         self.nb = nb
         self.delay_max = delay_max
 
-        self.transmitter = Transmitter(M1, M2, N_prime, k, L, n, k_mod)
+        self.transmitter = Transmitter(M1, M2, self.N_prime, k, L, self.n, k_mod)
         self.receiver = Receiver(M1, M2, k_mod, L, N_prime)
 
-    def forward(self, x, SNR_db, training=True):
+    def forward(self, x, SNR_db, delay, training=True):
 
         # Transmitter part
         # input size = (batch_size, 1, k), output size = (batch_size, 2, n)
         x = self.transmitter(x)
-
-        # randomly generate delay for each message
-        # delay has the size (batch_size, 1),
-        # delay_onehot has the size (batch_size, 1, delay_max + 1)
-        delay, delay_onehot = generate_random_delay(
-            batch_size=x.shape[0], delay_max=self.delay_max
-        )
 
         # Channel part (including upsampling and pulse shaping)
         # input size = (batch_size, 2, n)
@@ -340,14 +429,3 @@ class CNN_AutoEncoder(nn.Module):
             x = self.receiver(x, training=False)
 
             return x
-
-
-def generate_random_delay(batch_size, delay_max):
-    # generate random delay for each message of size (batch_size, 1), the delay is uniform distributed in [0, delay_max]
-    delay = torch.randint(low=0, high=delay_max + 1, size=(batch_size, 1))
-
-    # convert delay to one-hot encoding
-    # delay_onehot has the size (batch_size, 1, delay_max + 1)
-    delay_onehot = F.one_hot(delay, num_classes=delay_max + 1)
-
-    return delay, delay_onehot
