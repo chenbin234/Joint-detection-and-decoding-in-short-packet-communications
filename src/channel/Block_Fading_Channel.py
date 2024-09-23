@@ -22,7 +22,7 @@ def Block_fading_channel(transmitted_signal, tp, N_up, nb, delay, SNR_db, delay_
         delay_max (int): The maximum delay of the block fading channel.
 
     Returns:
-        received_signal (torch.Tensor): The output signal of shape (batch_size, nb, n // nb * N_up + delay_max, 2).
+        received_signal (torch.Tensor): The output signal of shape (batch_size, 2, nb, n // nb * N_up + delay_max).
     """
 
     # get the batch size and the number of symbols per message
@@ -65,11 +65,11 @@ def Block_fading_channel(transmitted_signal, tp, N_up, nb, delay, SNR_db, delay_
     received_signal = torch.cat(received_signal_blocks, dim=1)
 
     # stack the real and imaginary parts of the received signal
-    # the output is a tensor of shape (batch_size, nb, n // nb * N_up + delay_max, 2)
+    # the output is a tensor of shape (batch_size, 2, nb, n // nb * N_up + delay_max)
     received_signal_real = received_signal.real
     received_signal_imag = received_signal.imag
     received_signal_stack = torch.stack(
-        (received_signal_real, received_signal_imag), dim=3
+        [received_signal_real, received_signal_imag], dim=1
     )
 
     return received_signal_stack
