@@ -187,6 +187,7 @@ def train_one_training_step(
     snr_min,
     snr_max,
     alpha,
+    true_delay,
     true_delay_onehot,
 ):
     """
@@ -220,7 +221,9 @@ def train_one_training_step(
         optimizer.zero_grad()
 
         if model_type == "CNN_AutoEncoder":
-            estimated_delay, predictions = model.forward(X, SNR_db=training_snr_db)
+            estimated_delay, predictions = model.forward(
+                X, true_delay, true_delay_onehot, SNR_db=training_snr_db
+            )
 
         loss_sync = loss_fn_sync(estimated_delay, true_delay_onehot)
         loss_decoding = loss_fn_decoding(predictions, X)
@@ -274,6 +277,7 @@ def CNN_AutoEncoder_validate(
     snr_min,
     snr_max,
     alpha,
+    true_delay,
     true_delay_onehot,
 ):
     """
@@ -312,7 +316,7 @@ def CNN_AutoEncoder_validate(
 
                 # prediction by the model, shape (batch_size, 1, k)
                 estimated_delay, predictions = model.forward(
-                    X_val, SNR_db=val_snr_db[T_val]
+                    X_val, true_delay, true_delay_onehot, SNR_db=val_snr_db[T_val]
                 )
 
                 # compute the loss
