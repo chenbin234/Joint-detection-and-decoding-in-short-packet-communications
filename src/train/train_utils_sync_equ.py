@@ -7,6 +7,7 @@ import torch
 import wandb
 import torch.nn as nn
 from torch.utils.data import DataLoader
+import torch.nn.functional as F
 from features.build_pytorch_dataset import InfobitDataset
 
 
@@ -26,6 +27,8 @@ def training_loop(
     snr_min,
     snr_max,
     k,
+    delay_max,
+    alpha,
 ):
     """
     Training loop for the transformer_encoder_decoder model.
@@ -87,22 +90,17 @@ def training_loop(
         )
         val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
+        # randomly generate delay for each message
+        # delay has the size (batch_size, 1),
+        # delay_onehot has the size (batch_size, 1, delay_max + 1)
+        true_delay, true_delay_onehot = generate_random_delay(
+            batch_size=batch_size, delay_max=delay_max
+        )
+
         for T in range(training_steps):
 
-            # # generate random information bits of size (batch_size, 1, k)
-            # train_dataset = InfobitDataset(num_samples=500, k=k)
-            # val_dataset = InfobitDataset(num_samples=500, k=k)
-
-            # # create the train and val dataloaders
-            # train_dataloader = DataLoader(
-            #     train_dataset, batch_size=batch_size, shuffle=True
-            # )
-            # val_dataloader = DataLoader(
-            #     val_dataset, batch_size=batch_size, shuffle=False
-            # )
-
-            # train for one epoch
-            if model_type == "CNN_AutoEncoder_sync_equ":
+            # train for one training step
+            if model_type == "CNN_AutoEncoder":
                 model, train_loss_batches_per_training_step = train_one_training_step(
                     model,
                     optimizer,
@@ -112,10 +110,12 @@ def training_loop(
                     val_dataloader,
                     device,
                     print_every,
-                    model_type="CNN_AutoEncoder_sync_equ",
+                    model_type="CNN_AutoEncoder",
                     training_snr_db=training_snr_db[epoch - 1, T],
                     snr_min=snr_min,
                     snr_max=snr_max,
+                    alpha=alpha,
+                    true_delay_onehot=true_delay_onehot,
                 )
 
             # add the loss to the list, the list contains training_steps elements
@@ -138,6 +138,8 @@ def training_loop(
             device,
             snr_min,
             snr_max,
+            alpha,
+            true_delay_onehot,
         )
 
         print(
@@ -184,6 +186,8 @@ def train_one_training_step(
     training_snr_db,
     snr_min,
     snr_max,
+    alpha,
+    true_delay_onehot,
 ):
     """
     Train the model for one epoch.
@@ -216,9 +220,12 @@ def train_one_training_step(
         optimizer.zero_grad()
 
         if model_type == "CNN_AutoEncoder":
-            predictions = model.forward(X, SNR_db=training_snr_db)
+            estimated_delay, predictions = model.forward(X, SNR_db=training_snr_db)
 
-        loss = loss_fn(predictions, X)
+        loss_sync = loss_fn_sync(estimated_delay, true_delay_onehot)
+        loss_decoding = loss_fn_decoding(predictions, X)
+
+        loss = loss_decoding + alpha * loss_sync
 
         # add the loss to the list
         train_loss_batches_per_training_step.append(loss.item())
@@ -237,7 +244,13 @@ def train_one_training_step(
             # compute the validation loss
             if model_type == "CNN_AutoEncoder":
                 val_loss = CNN_AutoEncoder_validate(
-                    model, loss_fn, val_loader, device, snr_min, snr_max
+                    model,
+                    loss_sync,
+                    loss_decoding,
+                    val_loader,
+                    device,
+                    snr_min,
+                    snr_max,
                 )
 
             # switch back to training mode (since when calling validate() the model is switched to eval mode)
@@ -254,11 +267,14 @@ def train_one_training_step(
 
 def CNN_AutoEncoder_validate(
     model,
-    loss_fn,
+    loss_sync,
+    loss_decoding,
     val_loader,
     device,
     snr_min,
     snr_max,
+    alpha,
+    true_delay_onehot,
 ):
     """
     Function to validate the model on the whole validation dataset.
@@ -295,10 +311,15 @@ def CNN_AutoEncoder_validate(
                 X_val = data_val.to(device)
 
                 # prediction by the model, shape (batch_size, 1, k)
-                predictions = model.forward(X_val, SNR_db=val_snr_db[T_val])
+                estimated_delay, predictions = model.forward(
+                    X_val, SNR_db=val_snr_db[T_val]
+                )
 
                 # compute the loss
-                batch_loss = loss_fn(predictions, X_val)
+                batch_loss_sync = loss_sync(estimated_delay, true_delay_onehot)
+                batch_loss_decoding = loss_decoding(predictions, X_val)
+
+                batch_loss = batch_loss_decoding + alpha * batch_loss_sync
 
                 # update the cummulative loss
                 val_loss_cum += batch_loss.item()
@@ -319,3 +340,14 @@ def count_parameters(model):
         int: The total number of trainable parameters in the model.
     """
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+
+def generate_random_delay(batch_size, delay_max):
+    # generate random delay for each message of size (batch_size, 1), the delay is uniform distributed in [0, delay_max]
+    delay = torch.randint(low=0, high=delay_max + 1, size=(batch_size, 1))
+
+    # convert delay to one-hot encoding
+    # delay_onehot has the size (batch_size, 1, delay_max + 1)
+    delay_onehot = F.one_hot(delay, num_classes=delay_max + 1)
+
+    return delay, delay_onehot
