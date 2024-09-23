@@ -77,8 +77,8 @@ def training_loop(
         train_loss_batches_per_epoch = []
 
         # generate random information bits of size (batch_size, 1, k)
-        train_dataset = InfobitDataset(num_samples=1e5, k=k)
-        val_dataset = InfobitDataset(num_samples=1e4, k=k)
+        train_dataset = InfobitDataset(num_samples=2e3, k=k)
+        val_dataset = InfobitDataset(num_samples=1e3, k=k)
 
         if epoch == 1:
             print("number of training samples per epoch: ", len(train_dataset))
@@ -115,6 +115,7 @@ def training_loop(
                     snr_min=snr_min,
                     snr_max=snr_max,
                     alpha=alpha,
+                    true_delay=true_delay,
                     true_delay_onehot=true_delay_onehot,
                 )
 
@@ -222,7 +223,7 @@ def train_one_training_step(
 
         if model_type == "CNN_AutoEncoder":
             estimated_delay, predictions = model.forward(
-                X, true_delay, true_delay_onehot, SNR_db=training_snr_db
+                X, true_delay, true_delay_onehot, SNR_db=training_snr_db, device=device
             )
 
         loss_sync = loss_fn_sync(estimated_delay, true_delay_onehot)
@@ -316,7 +317,11 @@ def CNN_AutoEncoder_validate(
 
                 # prediction by the model, shape (batch_size, 1, k)
                 estimated_delay, predictions = model.forward(
-                    X_val, true_delay, true_delay_onehot, SNR_db=val_snr_db[T_val]
+                    X_val,
+                    true_delay,
+                    true_delay_onehot,
+                    SNR_db=val_snr_db[T_val],
+                    device=device,
                 )
 
                 # compute the loss

@@ -36,9 +36,10 @@ def cutoff(x_delay, delay_one_hot):
                 i, :, j, delay[i] : delay[i] + block_length - delay_max
             ]
 
-    # stack received_signal_cut on 3rd dimension, to get the shape (batch_size, 2, n * N_up)
-    y_delay_removed = torch.stack(
-        [received_signal_cut[:, :, i, :] for i in range(nb)], dim=2
+    # received_signal_cut has the shape (batch_size, 2, nb, n // nb * N_up), where nb is the number of blocks
+    # we want to stack the blocks on the 3rd dimension to get the shape (batch_size, 2, n * N_up)
+    y_delay_removed = received_signal_cut.reshape(
+        (batch_size, 2, nb * (block_length - delay_max))
     )
 
-    return received_signal_cut
+    return y_delay_removed

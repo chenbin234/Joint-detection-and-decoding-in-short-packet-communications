@@ -325,6 +325,9 @@ class Receiver(nn.Module):
         self.dec_last_block = DEC_CNN_last_block(M1, F, n, k)
 
     def forward(self, x_delay, true_delay_onehot, num_iteration, training=True):
+
+        device = x_delay.device
+
         # Sync Block
         # input size = (batch_size, 2, nb, n // nb * N_up + delay_max)
         # output size = (batch_size, 1, delay_max + 1)
@@ -335,13 +338,13 @@ class Receiver(nn.Module):
         # output size = (batch_size, 2, n * N_up)
         if training:
 
-            y_delay_removed = cutoff(x_delay, estimated_delay)
+            y_delay_removed = cutoff(x_delay, true_delay_onehot).to(device)
 
         else:
-            y_delay_removed = cutoff(x_delay, true_delay_onehot)
+            y_delay_removed = cutoff(x_delay, estimated_delay).to(device)
 
         # input size = (batch_size, 2, n * N_up), output size = (batch_size, M2, n)
-        x = self.dec_input(x)
+        y = self.dec_input(y_delay_removed)
 
         # initiate i_c
         i_c_pri = 0
@@ -351,7 +354,7 @@ class Receiver(nn.Module):
 
             # EQ-CNN block
             # input size = (batch_size, M2, n), output size = (batch_size, F, n)
-            i_c = self.eq_block(y_delay_removed)
+            i_c = self.eq_block(y)
 
             # update i_c
             i_c = i_c - i_c_pri
@@ -366,14 +369,14 @@ class Receiver(nn.Module):
         #! last iteration
         # EQ-CNN last block
         # input size = (batch_size, M2, n), output size = (batch_size, F, n)
-        i_c = self.eq_block(y_delay_removed)
+        i_c = self.eq_block(y)
 
         # update i_c
         i_c = i_c - i_c_pri
 
         # DEC-CNN last block
         # input size = (batch_size, F, n), output size = (batch_size, 1, k)
-        y_decoded = self.dec_last_block()
+        y_decoded = self.dec_last_block(i_c)
 
         return estimated_delay, y_decoded
 
@@ -394,16 +397,23 @@ class CNN_AutoEncoder(nn.Module):
         self.receiver = Receiver(M1, M2, F, self.n, k, N_up, self.delay_max, nb)
 
     def forward(
-        self, x, true_delay, true_delay_onehot, SNR_db, training=True, num_iteration=5
+        self,
+        x,
+        true_delay,
+        true_delay_onehot,
+        SNR_db,
+        device,
+        training=True,
+        num_iteration=5,
     ):
 
         # Transmitter part
         # input size = (batch_size, 1, k), output size = (batch_size, 2, n)
-        x = self.transmitter(x)
+        x = self.transmitter(x).to(device)
 
         # Channel part (including upsampling and pulse shaping)
         # input size = (batch_size, 2, n)
-        # output size = (batch_size, nb, n // nb * N_up + delay_max, 2)
+        # output size = (batch_size, 2, nb, n // nb * N_up + delay_max)
         #! Todo: probably miss power normalization
         x_delay = Block_fading_channel(
             transmitted_signal=x,
@@ -413,6 +423,7 @@ class CNN_AutoEncoder(nn.Module):
             delay=true_delay,
             SNR_db=SNR_db,
             delay_max=self.delay_max,
+            device=device,
         )
 
         # Receiver part

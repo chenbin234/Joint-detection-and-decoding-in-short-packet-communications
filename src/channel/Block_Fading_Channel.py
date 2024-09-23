@@ -9,7 +9,9 @@ import torch
 from models.components.Pluse_shaping import pulse_shaping
 
 
-def Block_fading_channel(transmitted_signal, tp, N_up, nb, delay, SNR_db, delay_max):
+def Block_fading_channel(
+    transmitted_signal, tp, N_up, nb, delay, SNR_db, delay_max, device
+):
     """
     Function to simulate a block fading channel (include upsampling + pulse shaping).
 
@@ -60,9 +62,9 @@ def Block_fading_channel(transmitted_signal, tp, N_up, nb, delay, SNR_db, delay_
         # store the received block
         received_signal_blocks.append(received_block)
 
-    # concatenate the received blocks to get the received signal
+    # concatenate the nb received blocks to get the received signal, each has the shape (batch_size, n // nb * N_up + delay_max)
     # the output is a complex tensor of shape (batch_size, nb, n // nb * N_up + delay_max)
-    received_signal = torch.cat(received_signal_blocks, dim=1)
+    received_signal = torch.stack(received_signal_blocks, dim=1)
 
     # stack the real and imaginary parts of the received signal
     # the output is a tensor of shape (batch_size, 2, nb, n // nb * N_up + delay_max)
@@ -72,7 +74,7 @@ def Block_fading_channel(transmitted_signal, tp, N_up, nb, delay, SNR_db, delay_
         [received_signal_real, received_signal_imag], dim=1
     )
 
-    return received_signal_stack
+    return received_signal_stack.to(device)
 
 
 def Block_fading(x_pulse_shaped, SNR_db):

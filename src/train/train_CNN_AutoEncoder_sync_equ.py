@@ -78,6 +78,8 @@ def model_pipeline(hyperparameters):
             snr_min=config.snr_min,
             snr_max=config.snr_max,
             k=config.k,
+            delay_max=config.delay_max,
+            alpha=config.alpha,
         )
 
     return model
