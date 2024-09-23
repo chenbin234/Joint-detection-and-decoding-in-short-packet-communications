@@ -391,9 +391,11 @@ class CNN_AutoEncoder(nn.Module):
         self.delay_max = delay_max
 
         self.transmitter = Transmitter(M1, M2, self.N_prime, k, L, self.n, k_mod)
-        self.receiver = Receiver(M1, M2, k_mod, L, N_prime)
+        self.receiver = Receiver(M1, M2, F, self.n, k, N_up, self.delay_max, nb)
 
-    def forward(self, x, SNR_db, delay, training=True):
+    def forward(
+        self, x, true_delay, true_delay_onehot, num_iteration, SNR_db, training=True
+    ):
 
         # Transmitter part
         # input size = (batch_size, 1, k), output size = (batch_size, 2, n)
@@ -403,12 +405,12 @@ class CNN_AutoEncoder(nn.Module):
         # input size = (batch_size, 2, n)
         # output size = (batch_size, nb, n // nb * N_up + delay_max, 2)
         #! Todo: probably miss power normalization
-        x = Block_fading_channel(
+        x_delay = Block_fading_channel(
             transmitted_signal=x,
             tp=self.tp,
             N_up=self.N_up,
             nb=self.nb,
-            delay=delay,
+            delay=true_delay,
             SNR_db=SNR_db,
             delay_max=self.delay_max,
         )
@@ -420,12 +422,18 @@ class CNN_AutoEncoder(nn.Module):
             # output size
             # estimated_delay: (batch_size, 1, delay_max + 1)
             # x: (batch_size, 1, k)
-            estimated_delay, x = self.receiver(x, training=True)
+            estimated_delay, y_decoded = self.receiver(
+                x_delay, true_delay_onehot, num_iteration, training=True
+            )
 
-            return estimated_delay, x
+            return estimated_delay, y_decoded
 
         else:
-            # output size = (batch_size, 1, k)
-            x = self.receiver(x, training=False)
+            # output size
+            # estimated_delay: (batch_size, 1, delay_max + 1)
+            # x: (batch_size, 1, k)
+            estimated_delay, y_decoded = self.receiver(
+                x_delay, true_delay_onehot, num_iteration, training=False
+            )
 
-            return x
+            return estimated_delay, y_decoded
