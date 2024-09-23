@@ -154,7 +154,7 @@ class EQ_CNN_block(nn.Module):
 
 class DEC_CNN_block(nn.Module):
     def __init__(self, M1, F, num_blocks=5):
-        super(EQ_CNN_block, self).__init__()
+        super(DEC_CNN_block, self).__init__()
 
         self.cnn_block1 = CNN_block(
             in_channels=F,
@@ -179,7 +179,7 @@ class DEC_CNN_block(nn.Module):
 
 class DEC_CNN_last_block(nn.Module):
     def __init__(self, M1, F, n, k, num_blocks=5):
-        super(EQ_CNN_block, self).__init__()
+        super(DEC_CNN_last_block, self).__init__()
 
         self.cnn_block1 = CNN_block(
             in_channels=F,
@@ -382,9 +382,9 @@ class CNN_AutoEncoder(nn.Module):
     def __init__(self, M1, M2, k, N, L, k_mod, F, delay_max, nb, N_up, tp):
         super(CNN_AutoEncoder, self).__init__()
 
-        self.k_prime = k / L
-        self.N_prime = N / L
-        self.n = N / k_mod
+        self.k_prime = int(k / L)
+        self.N_prime = int(N / L)
+        self.n = int(N / k_mod)
         self.tp = tp
         self.N_up = N_up
         self.nb = nb
