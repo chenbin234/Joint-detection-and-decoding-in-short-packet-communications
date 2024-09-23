@@ -394,7 +394,7 @@ class CNN_AutoEncoder(nn.Module):
         self.receiver = Receiver(M1, M2, F, self.n, k, N_up, self.delay_max, nb)
 
     def forward(
-        self, x, true_delay, true_delay_onehot, num_iteration, SNR_db, training=True
+        self, x, true_delay, true_delay_onehot, SNR_db, training=True, num_iteration=5
     ):
 
         # Transmitter part
