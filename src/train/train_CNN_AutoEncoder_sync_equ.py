@@ -30,18 +30,12 @@ def make(config):
         k=config.k,
         N=config.N,
         L=config.L,
-        k_prime=config.k_prime,
-        N_prime=config.N_prime,
-        n=config.n,
         k_mod=config.k_mod,
         F=config.F,
         delay_max=config.delay_max,
         nb=config.nb,
-        ts=config.ts,
         N_up=config.N_up,
         tp=config.tp,
-        snr_min=config.snr_min,
-        snr_max=config.snr_max,
     )
 
     # Make the loss and optimizer
@@ -109,11 +103,11 @@ if __name__ == "__main__":
         os.makedirs(f"./models/{save_model_name}")
 
     config = dict(
-        model_type="CNN_AutoEncoder_sync_equ",
+        model_type="CNN_AutoEncoder",
         description="CNN AutoEncoder with Joint Syncronization, Equalization, and Channel Decoding",
         trainable_parameters=0,
-        epochs=100,
-        training_steps=20,
+        epochs=1,
+        training_steps=2,
         batch_size=500,
         learning_rate=1e-3,
         M1=300,
