@@ -99,7 +99,7 @@ if __name__ == "__main__":
 
     time = datetime.now().strftime("%Y%m%d_%H_%M_%S")
     # defining model save location
-    save_model_name = "CNN_AutoEncoder_Sync_Equ" + time
+    save_model_name = "CNN_AutoEncoder_Sync_Equ_" + time
     # create the folder if it doesn't exist
     if not os.path.exists(f"./models/{save_model_name}"):
         os.makedirs(f"./models/{save_model_name}")
@@ -108,8 +108,8 @@ if __name__ == "__main__":
         model_type="CNN_AutoEncoder",
         description="CNN AutoEncoder with Joint Syncronization, Equalization, and Channel Decoding",
         trainable_parameters=0,
-        epochs=1,
-        training_steps=2,
+        epochs=100,
+        training_steps=200,
         batch_size=500,
         learning_rate=1e-3,
         M1=300,
