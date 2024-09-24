@@ -77,8 +77,8 @@ def training_loop(
         train_loss_batches_per_epoch = []
 
         # generate random information bits of size (batch_size, 1, k)
-        train_dataset = InfobitDataset(num_samples=1e6, k=k)
-        val_dataset = InfobitDataset(num_samples=2e4, k=k)
+        train_dataset = InfobitDataset(num_samples=2e3, k=k)
+        val_dataset = InfobitDataset(num_samples=1e3, k=k)
 
         if epoch == 1:
             print("number of training samples per epoch: ", len(train_dataset))
@@ -92,7 +92,7 @@ def training_loop(
 
         # randomly generate delay for each message
         # delay has the size (batch_size, 1),
-        # delay_onehot has the size (batch_size, 1, delay_max + 1)
+        # delay_onehot has the size (batch_size, delay_max + 1)
         true_delay, true_delay_onehot = generate_random_delay(
             batch_size=batch_size, delay_max=delay_max, device=device
         )
