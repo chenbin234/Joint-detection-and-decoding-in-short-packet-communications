@@ -71,8 +71,8 @@ def model_pipeline(hyperparameters):
             model=model,
             batch_size=config.batch_size,
             test_dataloader=test_dataloader,
-            snr_min=config.snr_min,
-            snr_max=config.snr_max,
+            test_snr_min=config.snr_min,
+            test_snr_max=config.snr_max,
             delay_max=config.delay_max,
         )
 
@@ -92,13 +92,13 @@ if __name__ == "__main__":
     wandb.login()
 
     # defining model save location
-    save_model_folder = "CNN_AutoEncoder_20240917_11_29_24"
+    save_model_folder = "CNN_AutoEncoder_Sync_Equ_20240924_14_41_37"
 
     config = dict(
         model_type="CNN_AutoEncoder",
         description="inference CNN AutoEncoder with Joint Syncronization, Equalization, and Channel Decoding",
         save_model_folder=save_model_folder,  # the folder that the model be saved
-        model_file=f"./models/{save_model_folder}/{save_model_folder + '_epoch75'}.pth",
+        model_file=f"./models/{save_model_folder}/{save_model_folder + '_epoch5'}.pth",
         batch_size=512,
         learning_rate=1e-3,
         M1=300,
