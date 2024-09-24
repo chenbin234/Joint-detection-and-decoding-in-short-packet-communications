@@ -343,10 +343,10 @@ class Receiver(nn.Module):
         # output size = (batch_size, 2, n * N_up)
         if training:
 
-            y_delay_removed = cutoff(x_delay, true_delay_onehot).to(device)
+            y_delay_removed = cutoff(x_delay, true_delay_onehot, device)
 
         else:
-            y_delay_removed = cutoff(x_delay, estimated_delay).to(device)
+            y_delay_removed = cutoff(x_delay, estimated_delay, device)
 
         # input size = (batch_size, 2, n * N_up), output size = (batch_size, M2, n)
         y = self.dec_input(y_delay_removed)
@@ -414,7 +414,7 @@ class CNN_AutoEncoder(nn.Module):
 
         # Transmitter part
         # input size = (batch_size, 1, k), output size = (batch_size, 2, n)
-        x = self.transmitter(x).to(device)
+        x = self.transmitter(x)
 
         # Channel part (including upsampling and pulse shaping)
         # input size = (batch_size, 2, n)

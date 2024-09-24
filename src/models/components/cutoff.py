@@ -4,7 +4,7 @@
 import torch
 
 
-def cutoff(x_delay, delay_one_hot):
+def cutoff(x_delay, delay_one_hot, device):
     """
     Cutoff the delay from the received signal.
 
@@ -28,7 +28,9 @@ def cutoff(x_delay, delay_one_hot):
 
     # cutoff the delay from the received signal
     received_signal_cut = torch.zeros(
-        (batch_size, 2, nb, block_length - delay_max), dtype=torch.float32
+        (batch_size, 2, nb, block_length - delay_max),
+        dtype=torch.float32,
+        device=device,
     )
 
     for i in range(batch_size):

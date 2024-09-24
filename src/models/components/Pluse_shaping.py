@@ -6,7 +6,7 @@
 import torch
 
 
-def pulse_shaping(x, tp, N_up):
+def pulse_shaping(x, tp, N_up, device):
     """
     Perform pulse shaping (and upsampling) on the input signal.
 
@@ -23,7 +23,7 @@ def pulse_shaping(x, tp, N_up):
     batch_size, num_symbols_per_block = x.shape
 
     # create the square pulse, normalize it and convert it to a complex tensor
-    norm = torch.sqrt(torch.tensor(1 / tp, dtype=torch.complex64))
+    norm = torch.sqrt(torch.tensor(1 / tp, dtype=torch.complex64, device=device))
 
     # repeat the input tensor N_up times along the second dimension
     x_squared = torch.repeat_interleave(x, N_up, dim=1) * norm
