@@ -26,7 +26,7 @@ import numpy as np
 def make(config):
 
     # test dataset
-    test_dataset = InfobitDataset(num_samples=1e6, k=config.k)
+    test_dataset = InfobitDataset(num_samples=1e3, k=config.k)
 
     # create test dataloader
     test_dataloader = DataLoader(
@@ -47,6 +47,9 @@ def make(config):
         N_up=config.N_up,
         tp=config.tp,
     )
+
+    # load the well trained model
+    model.load_state_dict(torch.load(config.model_file)["model_state_dict"])
 
     return model, test_dataloader
 
@@ -99,7 +102,7 @@ if __name__ == "__main__":
         description="inference CNN AutoEncoder with Joint Syncronization, Equalization, and Channel Decoding",
         save_model_folder=save_model_folder,  # the folder that the model be saved
         model_file=f"./models/{save_model_folder}/{save_model_folder + '_epoch5'}.pth",
-        batch_size=512,
+        batch_size=500,
         learning_rate=1e-3,
         M1=300,
         M2=200,
