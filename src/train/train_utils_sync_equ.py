@@ -140,6 +140,7 @@ def training_loop(
             snr_min,
             snr_max,
             alpha,
+            true_delay,
             true_delay_onehot,
         )
 
@@ -325,7 +326,7 @@ def CNN_AutoEncoder_validate(
                 )
 
                 # compute the loss
-                batch_loss_sync = loss_sync(estimated_delay, true_delay_onehot)
+                batch_loss_sync = loss_sync(estimated_delay, true_delay_onehot.float())
                 batch_loss_decoding = loss_decoding(predictions, X_val)
 
                 batch_loss = batch_loss_decoding + alpha * batch_loss_sync
