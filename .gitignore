@@ -175,3 +175,6 @@ wandb/
 
 # ignore model files
 *.pth
+
+# ignore alvis cluster output files
+*.out
