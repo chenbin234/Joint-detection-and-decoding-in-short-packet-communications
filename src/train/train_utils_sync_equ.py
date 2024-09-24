@@ -77,8 +77,8 @@ def training_loop(
         train_loss_batches_per_epoch = []
 
         # generate random information bits of size (batch_size, 1, k)
-        train_dataset = InfobitDataset(num_samples=2e3, k=k)
-        val_dataset = InfobitDataset(num_samples=1e3, k=k)
+        train_dataset = InfobitDataset(num_samples=1e6, k=k)
+        val_dataset = InfobitDataset(num_samples=2e4, k=k)
 
         if epoch == 1:
             print("number of training samples per epoch: ", len(train_dataset))
