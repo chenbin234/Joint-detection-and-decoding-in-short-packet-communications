@@ -94,7 +94,7 @@ def training_loop(
         # delay has the size (batch_size, 1),
         # delay_onehot has the size (batch_size, 1, delay_max + 1)
         true_delay, true_delay_onehot = generate_random_delay(
-            batch_size=batch_size, delay_max=delay_max
+            batch_size=batch_size, delay_max=delay_max, device=device
         )
 
         for T in range(training_steps):
@@ -226,7 +226,7 @@ def train_one_training_step(
                 X, true_delay, true_delay_onehot, SNR_db=training_snr_db, device=device
             )
 
-        loss_sync = loss_fn_sync(estimated_delay, true_delay_onehot)
+        loss_sync = loss_fn_sync(estimated_delay, true_delay_onehot.float())
         loss_decoding = loss_fn_decoding(predictions, X)
 
         loss = loss_decoding + alpha * loss_sync
@@ -351,7 +351,7 @@ def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
-def generate_random_delay(batch_size, delay_max):
+def generate_random_delay(batch_size, delay_max, device):
     # generate random delay for each message of size (batch_size, 1), the delay is uniform distributed in [0, delay_max]
     delay = torch.randint(low=0, high=delay_max + 1, size=(batch_size, 1))
 
@@ -359,4 +359,8 @@ def generate_random_delay(batch_size, delay_max):
     # delay_onehot has the size (batch_size, 1, delay_max + 1)
     delay_onehot = F.one_hot(delay, num_classes=delay_max + 1)
 
-    return delay, delay_onehot
+    # remove the second dimension of delay_onehot
+    # delay_onehot has the size (batch_size, delay_max + 1)
+    delay_onehot = delay_onehot.squeeze(1)
+
+    return delay.to(device), delay_onehot.to(device)
