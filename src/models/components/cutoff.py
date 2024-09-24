@@ -10,13 +10,14 @@ def cutoff(x_delay, delay_one_hot):
 
     Parameters:
     - x_delay (torch.Tensor): The received signal of shape (batch_size, 2, nb, n // nb * N_up + delay_max), each element is a real number.
-    - delay_one_hot (torch.Tensor): The one-hot encoded delay of shape (batch_size, 1, delay_max + 1)
+    - delay_one_hot (torch.Tensor): The one-hot encoded delay of shape (batch_size, delay_max + 1)
 
     Returns:
     - received_signal_cut (torch.Tensor): The output signal of shape (batch_size, 2, n * N_up)
     """
 
     # get the batch size, number of bits, and block length
+    # block_length = n // nb * N_up + delay_max
     batch_size, _, nb, block_length = x_delay.shape
 
     # get the delay_max
