@@ -29,6 +29,8 @@ def training_loop(
     k,
     delay_max,
     alpha,
+    train_num_samples_per_epoch,
+    val_num_samples_per_epoch,
 ):
     """
     Training loop for the transformer_encoder_decoder model.
@@ -70,15 +72,15 @@ def training_loop(
     # use 1 value for each epoch
     training_snr_db = (
         torch.rand((num_epochs, training_steps)) * (snr_max - snr_min) + snr_min
-    )
+    ).to(device)
 
     for epoch in range(start_epoch, num_epochs + 1):
 
         train_loss_batches_per_epoch = []
 
         # generate random information bits of size (batch_size, 1, k)
-        train_dataset = InfobitDataset(num_samples=2e3, k=k)
-        val_dataset = InfobitDataset(num_samples=1e3, k=k)
+        train_dataset = InfobitDataset(num_samples=train_num_samples_per_epoch, k=k)
+        val_dataset = InfobitDataset(num_samples=val_num_samples_per_epoch, k=k)
 
         if epoch == 1:
             print("number of training samples per epoch: ", len(train_dataset))
@@ -298,7 +300,7 @@ def CNN_AutoEncoder_validate(
     val_loss_snr_list = []  # list to store the validation loss for each SNR_db value
 
     # generate a list of SNR_db values between snr_min and snr_max for validation
-    val_snr_db = torch.arange(snr_min, snr_max + 0.5, 0.5)
+    val_snr_db = torch.arange(snr_min, snr_max + 0.5, 2, device=device)
 
     # switch to evaluation mode
     model.eval()
