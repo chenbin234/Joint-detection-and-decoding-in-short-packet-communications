@@ -89,13 +89,13 @@ if __name__ == "__main__":
     wandb.login()
 
     # defining model save location
-    save_model_folder = "CNN_AutoEncoder_20240916_16_28_11"
+    save_model_folder = "CNN_AutoEncoder_20240917_11_29_24"
 
     config = dict(
         model_type="CNN_AutoEncoder",
         description="debugging",
         save_model_folder=save_model_folder,  # the folder that the model be saved
-        model_file=f"./models/{save_model_folder}/{save_model_folder + '_epoch100'}.pth",
+        model_file=f"./models/{save_model_folder}/{save_model_folder + '_epoch75'}.pth",
         batch_size=512,
         learning_rate=1e-3,
         M1=200,
