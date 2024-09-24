@@ -360,7 +360,7 @@ class Receiver(nn.Module):
             i_c = i_c - i_c_pri
 
             # DEC-CNN block
-            # input size = (batch_size, F, n), output size = (batch_size, M1, n)
+            # input size = (batch_size, F, n), output size = (batch_size, F, n)
             i_b = self.dec_block(i_c)
 
             # update i_c_pri
