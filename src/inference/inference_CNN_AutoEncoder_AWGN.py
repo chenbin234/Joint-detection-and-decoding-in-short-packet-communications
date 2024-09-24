@@ -1,5 +1,5 @@
 """
-This file is to train the model with the CNN AutoEncoder architecture
+This file is to inference the model with the CNN AutoEncoder architecture
 
 """
 
