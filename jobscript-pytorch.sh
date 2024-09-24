@@ -24,6 +24,8 @@ module load wandb/0.13.4-GCCcore-11.3.0
 
 # or you can instead use
 #jupyter nbconvert --to python data-pytorch.ipynb &&
-python3 ./src/train/train_CNN_AutoEncoder_AWGN.py
+# python3 ./src/train/train_CNN_AutoEncoder_AWGN.py
 # python3 ./src/inference/inference_CNN_AutoEncoder_AWGN.py
+
+python3 ./src/train/train_CNN_AutoEncoder_sync_equ.py
 
