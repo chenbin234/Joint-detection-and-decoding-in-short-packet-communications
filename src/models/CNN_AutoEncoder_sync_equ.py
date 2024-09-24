@@ -194,6 +194,8 @@ class DEC_CNN_last_block(nn.Module):
 
         self.decoder_ouput = nn.Linear(in_features=M1 * n, out_features=k)
 
+        self.sigmoid = nn.Sigmoid()
+
     def forward(self, x):
         # input size = (batch_size, F, n), output size = (batch_size, M1, n)
         x = self.cnn_block1(x)
@@ -205,6 +207,9 @@ class DEC_CNN_last_block(nn.Module):
         # final decoder output
         # input size = (batch_size, M1*n), output size = (batch_size, k)
         x = self.decoder_ouput(x)
+
+        # add sigmoid activation function
+        x = self.sigmoid(x)
 
         # add one dimension to the output (second dimension) to make sure the output has the shape (batch_size, 1, k)
         x = x.unsqueeze(1)
