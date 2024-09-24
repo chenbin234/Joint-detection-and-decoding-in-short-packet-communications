@@ -32,7 +32,7 @@ def inference_loop(
     model.to(device)
 
     # inference snr_db values is a list from test_snr_min to test_snr_max with step 0.5, contains 2 sides of the SNR_db
-    inference_snr_db = torch.arange(test_snr_min, test_snr_max + 0.5, 0.5)
+    inference_snr_db = torch.arange(test_snr_min, test_snr_max + 0.5, 2)
 
     # initialize the list to store the bit error rate and block error rate
     infer_ber_list = []  # list to store the bit error rate
@@ -88,9 +88,14 @@ def inference_loop(
             infer_ber_avg = sum(ber_snr_i) / len(ber_snr_i)
             infer_bler_avg = sum(bler_snr_i) / len(bler_snr_i)
 
+            # print
+            print(
+                f"For SNR = {inference_snr_db[i]}, the average BER is {infer_ber_avg}, the average BLER is {infer_bler_avg}"
+            )
+
             # append the average bit error rate and block error rate to the list
-            infer_ber_list.append(infer_ber_avg)
-            infer_bler_list.append(infer_bler_avg)
+            infer_ber_list.append(infer_ber_avg.item())
+            infer_bler_list.append(infer_bler_avg.item())
 
     # define our custom x axis metric
     wandb.define_metric("custom_step")

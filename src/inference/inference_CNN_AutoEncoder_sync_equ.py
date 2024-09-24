@@ -26,7 +26,7 @@ import numpy as np
 def make(config):
 
     # test dataset
-    test_dataset = InfobitDataset(num_samples=1e3, k=config.k)
+    test_dataset = InfobitDataset(num_samples=5000, k=config.k)
 
     # create test dataloader
     test_dataloader = DataLoader(
@@ -102,7 +102,7 @@ if __name__ == "__main__":
         description="inference CNN AutoEncoder with Joint Syncronization, Equalization, and Channel Decoding",
         save_model_folder=save_model_folder,  # the folder that the model be saved
         model_file=f"./models/{save_model_folder}/{save_model_folder + '_epoch5'}.pth",
-        batch_size=500,
+        batch_size=5000,
         learning_rate=1e-3,
         M1=300,
         M2=200,
