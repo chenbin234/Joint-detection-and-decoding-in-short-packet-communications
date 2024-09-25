@@ -72,6 +72,11 @@ def inference_loop(
             infer_ber_avg = sum(ber_snr_i) / len(ber_snr_i)
             infer_bler_avg = sum(bler_snr_i) / len(bler_snr_i)
 
+            # print
+            print(
+                f"For SNR = {inference_snr_db[i]}, the average BER is {infer_ber_avg}, the average BLER is {infer_bler_avg}"
+            )
+
             # append the average bit error rate and block error rate to the list
             infer_ber_list.append(infer_ber_avg)
             infer_bler_list.append(infer_bler_avg)
