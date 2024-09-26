@@ -26,15 +26,23 @@ def AWGN_Channel(transmitter_signal, SNR_db):
     SNR = 10 ** (SNR_db / 10).to(device)
 
     # normalise the trasmitter signal to have unit power (normalise across the 'n' dimension)
-    transmitter_signal_mean = torch.mean(transmitter_signal, dim=2, keepdim=True)
-    transmitter_signal_std = torch.std(transmitter_signal, dim=2, keepdim=True)
-    transmitter_signal_normalized = (
-        transmitter_signal - transmitter_signal_mean
-    ) / transmitter_signal_std
+    # transmitter_signal_mean = torch.mean(transmitter_signal, dim=2, keepdim=True)
+    # transmitter_signal_std = torch.std(transmitter_signal, dim=2, keepdim=True)
+    # transmitter_signal_normalized = (
+    #     transmitter_signal - transmitter_signal_mean
+    # ) / transmitter_signal_std
+
+    # calculate the average power of the transmitted signal, which is a real value
+    transmitter_signal_power = calculate_average_power(transmitter_signal)
+
+    # normalise the trasmitter signal to have unit power
+    transmitter_signal_normalized = transmitter_signal / torch.sqrt(
+        transmitter_signal_power
+    )
 
     # generate the noise
     noise = torch.randn(transmitter_signal_normalized.shape).to(device) * torch.sqrt(
-        1 / SNR
+        1 / (2 * SNR)
     )
 
     # output signal
@@ -70,13 +78,13 @@ def calculate_average_power(signal):
     Returns:
     torch.Tensor: Average power for each batch
     """
-    # Compute power of the real part
+    # Compute power of the real part of shape (batch_size, n)
     real_power = signal[:, 0, :] ** 2
 
-    # Compute power of the imaginary part
+    # Compute power of the imaginary part of shape (batch_size, n)
     imag_power = signal[:, 1, :] ** 2
 
-    # Total power is the sum of real and imaginary powers
+    # Total power is the sum of real and imaginary powers of shape (batch_size, n)
     total_power = real_power + imag_power
 
     # Average the power across the signal dimension
