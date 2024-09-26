@@ -25,22 +25,37 @@ def AWGN_Channel(transmitter_signal, SNR_db):
     # Convert SNR from dB to linear scale
     SNR = 10 ** (SNR_db / 10).to(device)
 
-    # Calculate the signal power
-    signal_power = calculate_average_power(transmitter_signal)
+    # normalise the trasmitter signal to have unit power (normalise across the 'n' dimension)
+    transmitter_signal_mean = torch.mean(transmitter_signal, dim=2, keepdim=True)
+    transmitter_signal_std = torch.std(transmitter_signal, dim=2, keepdim=True)
+    transmitter_signal_normalized = (
+        transmitter_signal - transmitter_signal_mean
+    ) / transmitter_signal_std
 
-    # Calculate the noise power
-    noise_power = signal_power / SNR
-
-    # Generate the noise
-    # noise = torch.randn(transmitter_signal.shape).to(device) * torch.sqrt(
-    #     torch.tensor(noise_power)
-    # )
-    noise = torch.randn(transmitter_signal.shape).to(device) * torch.sqrt(
-        noise_power.clone().detach()
+    # generate the noise
+    noise = torch.randn(transmitter_signal_normalized.shape).to(device) * torch.sqrt(
+        1 / SNR
     )
 
-    # Output signal
-    output_signal = transmitter_signal + noise
+    # output signal
+    output_signal = transmitter_signal_normalized + noise
+
+    # # Calculate the signal power
+    # signal_power = calculate_average_power(transmitter_signal)
+
+    # # Calculate the noise power
+    # noise_power = signal_power / SNR
+
+    # # Generate the noise
+    # # noise = torch.randn(transmitter_signal.shape).to(device) * torch.sqrt(
+    # #     torch.tensor(noise_power)
+    # # )
+    # noise = torch.randn(transmitter_signal.shape).to(device) * torch.sqrt(
+    #     noise_power.clone().detach()
+    # )
+
+    # # Output signal
+    # output_signal = transmitter_signal + noise
 
     return output_signal
 
