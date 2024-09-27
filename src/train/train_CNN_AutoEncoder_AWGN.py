@@ -101,7 +101,7 @@ if __name__ == "__main__":
         training_steps=20,
         batch_size=500,
         learning_rate=1e-3,
-        M1=200,
+        M1=100,
         M2=100,
         N_prime=4,
         k=64,

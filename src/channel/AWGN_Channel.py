@@ -33,36 +33,36 @@ def AWGN_Channel(transmitter_signal, SNR_db):
     # ) / transmitter_signal_std
 
     ## ! Attempt 2 - normalising the transmitted signal
-    # # calculate the average power of the transmitted signal, which is a real value
-    # transmitter_signal_power = calculate_average_power(transmitter_signal)
+    # calculate the average power of the transmitted signal, which is a real value
+    transmitter_signal_power = calculate_average_power(transmitter_signal)
 
-    # # normalise the trasmitter signal to have unit power
-    # transmitter_signal_normalized = transmitter_signal / torch.sqrt(
-    #     transmitter_signal_power
-    # )
-
-    # # generate the noise
-    # noise = torch.randn(transmitter_signal_normalized.shape).to(device) * torch.sqrt(
-    #     1 / (2 * SNR)
-    # )
-
-    # # output signal
-    # output_signal = transmitter_signal_normalized + noise
-
-    ## ! Attempt 1 - not normalising the transmitted signal
-    # Calculate the signal power
-    signal_power = calculate_average_power(transmitter_signal)
-
-    # Calculate the noise power
-    noise_power = signal_power / SNR
-
-    # Generate the noise
-    noise = torch.randn(transmitter_signal.shape).to(device) * torch.sqrt( 
-        2 * noise_power.clone().detach()
+    # normalise the trasmitter signal to have unit power
+    transmitter_signal_normalized = transmitter_signal / torch.sqrt(
+        transmitter_signal_power
     )
 
-    # Output signal
-    output_signal = transmitter_signal + noise
+    # generate the noise
+    noise = torch.randn(transmitter_signal_normalized.shape).to(device) * torch.sqrt(
+        1 / (2 * SNR)
+    )
+
+    # output signal
+    output_signal = transmitter_signal_normalized + noise
+
+    ## ! Attempt 1 - not normalising the transmitted signal
+    # # Calculate the signal power
+    # signal_power = calculate_average_power(transmitter_signal)
+
+    # # Calculate the noise power
+    # noise_power = signal_power / SNR
+
+    # # Generate the noise
+    # noise = torch.randn(transmitter_signal.shape).to(device) * torch.sqrt( 
+    #     2 * noise_power.clone().detach()
+    # )
+
+    # # Output signal
+    # output_signal = transmitter_signal + noise
 
     return output_signal
 

@@ -82,7 +82,7 @@ class Transmitter(nn.Module):
             in_channels=k_mod,
             out_channels=M2,
             kernel_size=5,
-            num_blocks=4,
+            num_blocks=3,
             padding="same",
         )
 
@@ -132,7 +132,7 @@ class Receiver(nn.Module):
         # Demodulator part
         # input size = (batch_size, 2, n), output size = (batch_size, M2, n)
         self.demodulator1 = CNN_block(
-            in_channels=2, out_channels=M2, kernel_size=5, num_blocks=4, padding="same"
+            in_channels=2, out_channels=M2, kernel_size=5, num_blocks=3, padding="same"
         )
 
         # input size = (batch_size, M2, n), output size = (batch_size, k_mod, n)
