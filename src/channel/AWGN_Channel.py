@@ -32,22 +32,35 @@ def AWGN_Channel(transmitter_signal, SNR_db):
     #     transmitter_signal - transmitter_signal_mean
     # ) / transmitter_signal_std
 
-    ## ! Attempt 2 - normalising the transmitted signal
+    ## ! Attempt 3 - In order to reproduce Xi's results, we now have transmitter_signal of size (batch_size, 1, n)
     # calculate the average power of the transmitted signal, which is a real value
-    transmitter_signal_power = calculate_average_power(transmitter_signal)
+    transmitter_signal_power = calculate_average_power_1d(transmitter_signal)
 
     # normalise the trasmitter signal to have unit power
-    transmitter_signal_normalized = transmitter_signal / torch.sqrt(
-        transmitter_signal_power
-    )
+    transmitter_signal_normalized = transmitter_signal / torch.sqrt(transmitter_signal_power)
 
     # generate the noise
-    noise = torch.randn(transmitter_signal_normalized.shape).to(device) * torch.sqrt(
-        1 / (2 * SNR)
-    )
+    noise = torch.randn(transmitter_signal_normalized.shape).to(device) * torch.sqrt(1/SNR)
 
     # output signal
     output_signal = transmitter_signal_normalized + noise
+
+    ## ! Attempt 2 - normalising the transmitted signal
+    # calculate the average power of the transmitted signal, which is a real value
+    # transmitter_signal_power = calculate_average_power(transmitter_signal)
+
+    # # normalise the trasmitter signal to have unit power
+    # transmitter_signal_normalized = transmitter_signal / torch.sqrt(
+    #     transmitter_signal_power
+    # )
+
+    # # generate the noise
+    # noise = torch.randn(transmitter_signal_normalized.shape).to(device) * torch.sqrt(
+    #     1 / (2 * SNR)
+    # )
+
+    # # output signal
+    # output_signal = transmitter_signal_normalized + noise
 
     ## ! Attempt 1 - not normalising the transmitted signal
     # # Calculate the signal power
@@ -93,6 +106,30 @@ def calculate_average_power(signal):
     average_power = average_power_batch.mean()
 
     return average_power
+
+
+
+def calculate_average_power_1d(signal):
+    """
+    Calculate the average power of a complex signal.
+
+    Parameters:
+    signal (torch.Tensor): Input signal of size (batch_size, 1, n)
+
+    Returns:
+    torch.Tensor: Average power for each batch
+    """
+    # output size = (batch_size, n)
+    power = signal[:, 0, :] ** 2
+
+    # Average the power across the signal dimension, output size = (batch_size,1)
+    average_power_batch = power.mean(dim=1)
+
+    # take the average of the power across the batch dimension
+    average_power = average_power_batch.mean()
+
+    return average_power
+
 
 
 # Example usage
