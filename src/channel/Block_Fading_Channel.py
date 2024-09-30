@@ -83,7 +83,7 @@ def Block_fading(x_pulse_shaped, SNR_db, device):
     Simulate a block fading channel with the given SNR for a signal x.
 
     Parameters:
-    - x (torch.Tensor): Input tensor of shape (batch_size, num_symbols_per_block * N_up + delay_max).
+    - x (torch.Tensor): Input tensor of shape (batch_size, num_symbols_per_block * N_up + delay_max), each element is a complex number.
     - snr_db: Signal-to-Noise Ratio in dB.
 
     Returns:
@@ -115,16 +115,26 @@ def Block_fading(x_pulse_shaped, SNR_db, device):
     # Calculate the signal power
     signal_power = calculate_average_power_complex(faded_signal).to(device)
 
-    # Calculate the noise power
-    noise_power = signal_power / SNR
+    #! normalise the transmitted signal to have unit power
+    faded_signal_normalized = faded_signal / torch.sqrt(signal_power.clone().detach())
 
-    # Generate the noise
+    # generate the noise
     noise = torch.randn(faded_signal.shape, dtype=torch.complex64).to(
         device
-    ) * torch.sqrt(noise_power.clone().detach())
+    ) * torch.sqrt(1 / SNR)
+
+    received_signal = faded_signal_normalized + noise
+
+    # Calculate the noise power
+    # noise_power = signal_power / SNR
+
+    # Generate the noise
+    # noise = torch.randn(faded_signal.shape, dtype=torch.complex64).to(
+    #     device
+    # ) * torch.sqrt(noise_power.clone().detach())
 
     # Add noise to the faded signal
-    received_signal = faded_signal + noise
+    # received_signal = faded_signal + noise
 
     return received_signal
 
