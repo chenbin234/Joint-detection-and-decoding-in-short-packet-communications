@@ -74,7 +74,7 @@ def model_pipeline(hyperparameters):
             start_epoch=1,
             print_every=None,
             save_model_name=config.save_model_name,
-            save_every=20,
+            save_every=25,
             snr_min=config.snr_min,
             snr_max=config.snr_max,
             k=config.k,
@@ -110,11 +110,11 @@ if __name__ == "__main__":
         model_type="CNN_AutoEncoder",
         description="CNN AutoEncoder with Joint Syncronization, Equalization, and Channel Decoding",
         trainable_parameters=0,
-        epochs=100,
-        training_steps=20,
+        epochs=50,
+        training_steps=40,
         batch_size=500,
         learning_rate=1e-3,
-        M1=200,
+        M1=100,
         M2=100,
         k=80,  # number of information bits
         N=288,  # number of coded bits
@@ -132,8 +132,8 @@ if __name__ == "__main__":
         snr_min=2,
         snr_max=20,
         alpha=0.01,  # factor of the sync loss in the total loss
-        train_num_samples_per_epoch=5e4,
-        val_num_samples_per_epoch=2e3,
+        train_num_samples_per_epoch=1e5,
+        val_num_samples_per_epoch=1e4,
         save_model_name=save_model_name,
     )
 

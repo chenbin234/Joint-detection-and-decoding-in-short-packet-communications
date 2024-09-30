@@ -92,12 +92,12 @@ def training_loop(
         )
         val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
-        # randomly generate delay for each message
-        # delay has the size (batch_size, 1),
-        # delay_onehot has the size (batch_size, delay_max + 1)
-        true_delay, true_delay_onehot = generate_random_delay(
-            batch_size=batch_size, delay_max=delay_max, device=device
-        )
+        # # randomly generate delay for each message
+        # # delay has the size (batch_size, 1),
+        # # delay_onehot has the size (batch_size, delay_max + 1)
+        # true_delay, true_delay_onehot = generate_random_delay(
+        #     batch_size=batch_size, delay_max=delay_max, device=device
+        # )
 
         for T in range(training_steps):
 
@@ -117,8 +117,8 @@ def training_loop(
                     snr_min=snr_min,
                     snr_max=snr_max,
                     alpha=alpha,
-                    true_delay=true_delay,
-                    true_delay_onehot=true_delay_onehot,
+                    delay_max=delay_max,
+                    batch_size=batch_size,
                 )
 
             # add the loss to the list, the list contains training_steps elements
@@ -142,8 +142,8 @@ def training_loop(
             snr_min,
             snr_max,
             alpha,
-            true_delay,
-            true_delay_onehot,
+            delay_max,
+            batch_size,
         )
 
         print(
@@ -191,8 +191,8 @@ def train_one_training_step(
     snr_min,
     snr_max,
     alpha,
-    true_delay,
-    true_delay_onehot,
+    delay_max,
+    batch_size,
 ):
     """
     Train the model for one epoch.
@@ -217,6 +217,13 @@ def train_one_training_step(
     num_batches = len(train_loader)
 
     for batch_index, data in enumerate(train_loader, 1):
+
+        # randomly generate delay for each message
+        # delay has the size (batch_size, 1),
+        # delay_onehot has the size (batch_size, delay_max + 1)
+        true_delay, true_delay_onehot = generate_random_delay(
+            batch_size=batch_size, delay_max=delay_max, device=device
+        )
 
         # get the features and targets, X has shape (batch_size, 12, 256), y has shape (batch_size, 4, 256)
         X = data.to(device)
@@ -281,8 +288,8 @@ def CNN_AutoEncoder_validate(
     snr_min,
     snr_max,
     alpha,
-    true_delay,
-    true_delay_onehot,
+    delay_max,
+    batch_size,
 ):
     """
     Function to validate the model on the whole validation dataset.
@@ -314,6 +321,13 @@ def CNN_AutoEncoder_validate(
             val_loss_cum = 0
 
             for batch_index, data_val in enumerate(val_loader, 1):
+
+                # randomly generate delay for each message
+                # delay has the size (batch_size, 1),
+                # delay_onehot has the size (batch_size, delay_max + 1)
+                true_delay, true_delay_onehot = generate_random_delay(
+                    batch_size=batch_size, delay_max=delay_max, device=device
+                )
 
                 # get the features and targets, X has shape (batch_size, 1, k)
                 X_val = data_val.to(device)
