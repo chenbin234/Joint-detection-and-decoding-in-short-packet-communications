@@ -50,18 +50,14 @@ def Block_fading_channel(
         # upsampling & pulse shape the block, the output is a complex tensor of shape (batch_size, n // nb * N_up)
         block_pulse_shaped = pulse_shaping(block_complex, tp, N_up, device)
 
-        # ! add delay, we consider a simple case that each sub block of one message experiences the same delay
-        # ! and the delay is uniform distributed in [0, delay_max]
-        # the input size is (batch_size, n // nb * N_up), the output size is (batch_size, n // nb * N_up + delay_max), each element is a complex number
-        block_pulse_shaped_delayed = add_delay(
-            block_pulse_shaped, delay, delay_max, device
-        )
         # simulate the block fading channel
         # the output is a complex tensor of shape (batch_size, n // nb * N_up + delay_max)
-        received_block = Block_fading(block_pulse_shaped_delayed, SNR_db, device)
+        block_fading_delay_noise = Block_fading(
+            block_pulse_shaped, delay, delay_max, SNR_db, device
+        )
 
         # store the received block
-        received_signal_blocks.append(received_block)
+        received_signal_blocks.append(block_fading_delay_noise)
 
     # concatenate the nb received blocks to get the received signal, each has the shape (batch_size, n // nb * N_up + delay_max)
     # the output is a complex tensor of shape (batch_size, nb, n // nb * N_up + delay_max)
@@ -78,12 +74,12 @@ def Block_fading_channel(
     return received_signal_stack.to(device)
 
 
-def Block_fading(x_pulse_shaped, SNR_db, device):
+def Block_fading(x_pulse_shaped, delay, delay_max, SNR_db, device):
     """
     Simulate a block fading channel with the given SNR for a signal x.
 
     Parameters:
-    - x (torch.Tensor): Input tensor of shape (batch_size, num_symbols_per_block * N_up + delay_max), each element is a complex number.
+    - x (torch.Tensor): Input tensor of shape (batch_size, num_symbols_per_block * N_up), each element is a complex number.
     - snr_db: Signal-to-Noise Ratio in dB.
 
     Returns:
@@ -93,8 +89,17 @@ def Block_fading(x_pulse_shaped, SNR_db, device):
     #! x_length = num_symbols_per_block * N_up + delay_max
     batch_size, x_length = x_pulse_shaped.shape
 
-    #! step 1: add block fading channel gain
+    #! step 1: normalise the transmitted signal to have unit power
+    # Convert SNR from dB to linear scale
+    SNR = 10 ** (SNR_db / 10).to(device)
 
+    # Calculate the signal power
+    signal_power = calculate_average_power_complex(x_pulse_shaped).to(device)
+
+    #! normalise the transmitted signal to have unit power
+    signal_normalized = x_pulse_shaped / torch.sqrt(signal_power.clone().detach())
+
+    #! step 2: add block fading channel gain
     # Generate the block gains which is complex Gaussian with unit variance
     H_l = torch.randn((batch_size, 1), dtype=torch.complex64, device=device)
 
@@ -105,36 +110,21 @@ def Block_fading(x_pulse_shaped, SNR_db, device):
     H_l_reshaped = torch.reshape(H_l, (batch_size, -1))
 
     # Apply the block fading channel to the transmitted signal (element-wise multiplication)
-    faded_signal = x_pulse_shaped * H_l_reshaped
+    faded_signal = signal_normalized * H_l_reshaped
 
-    #! step 2: add noise
+    # ! step 3 : add delay
+    # ! add delay, we consider a simple case that each sub block of one message experiences the same delay
+    # ! and the delay is uniform distributed in [0, delay_max]
+    # the input size is (batch_size, n // nb * N_up), the output size is (batch_size, n // nb * N_up + delay_max), each element is a complex number
+    block_fading_delayed = add_delay(faded_signal, delay, delay_max, device)
 
-    # Convert SNR from dB to linear scale
-    SNR = 10 ** (SNR_db / 10).to(device)
-
-    # Calculate the signal power
-    signal_power = calculate_average_power_complex(faded_signal).to(device)
-
-    #! normalise the transmitted signal to have unit power
-    faded_signal_normalized = faded_signal / torch.sqrt(signal_power.clone().detach())
-
+    #! step 4: add noise
     # generate the noise
-    noise = torch.randn(faded_signal.shape, dtype=torch.complex64).to(
+    noise = torch.randn(block_fading_delayed.shape, dtype=torch.complex64).to(
         device
     ) * torch.sqrt(1 / SNR)
 
-    received_signal = faded_signal_normalized + noise
-
-    # Calculate the noise power
-    # noise_power = signal_power / SNR
-
-    # Generate the noise
-    # noise = torch.randn(faded_signal.shape, dtype=torch.complex64).to(
-    #     device
-    # ) * torch.sqrt(noise_power.clone().detach())
-
-    # Add noise to the faded signal
-    # received_signal = faded_signal + noise
+    received_signal = block_fading_delayed + noise
 
     return received_signal
 
