@@ -62,7 +62,7 @@ class Transmitter(nn.Module):
 
         # input size = (batch_size, M1, L), output size = (batch_size, M1, L)
         self.encoding2 = CNN_block(
-            in_channels=M1, out_channels=M1, kernel_size=5, num_blocks=3, padding="same"
+            in_channels=M1, out_channels=M1, kernel_size=5, num_blocks=1, padding="same"
         )
 
         # input size = (batch_size, M1, L), output size = (batch_size, N_prime, L)
@@ -82,24 +82,24 @@ class Transmitter(nn.Module):
             in_channels=k_mod,
             out_channels=M2,
             kernel_size=5,
-            num_blocks=3,
+            num_blocks=1,
             padding="same",
         )
 
         # input size = (batch_size, M2, n), output size = (batch_size, 2, n)
         #! This part is different from the Xi Zhang's implementation, Xi Zhang has the out_channels = 1
-        # self.modulator2 = nn.Conv1d(
-        #     in_channels=M2, out_channels=2, kernel_size=1, padding="same"
-        # )
-        # self.modulator2_batchnorm = nn.BatchNorm1d(2)
-        # self.modulator2_linear = nn.Identity()
+        self.modulator2 = nn.Conv1d(
+            in_channels=M2, out_channels=2, kernel_size=1, padding="same"
+        )
+        self.modulator2_batchnorm = nn.BatchNorm1d(2)
+        self.modulator2_linear = nn.Identity()
 
         # ! In order to reproduce Xi's results, we now set the out_channels = 1
-        self.modulator2 = nn.Conv1d(
-            in_channels=M2, out_channels=1, kernel_size=1, padding="same"
-        )
-        self.modulator2_batchnorm = nn.BatchNorm1d(1)
-        self.modulator2_linear = nn.Identity()
+        # self.modulator2 = nn.Conv1d(
+        #     in_channels=M2, out_channels=1, kernel_size=1, padding="same"
+        # )
+        # self.modulator2_batchnorm = nn.BatchNorm1d(1)
+        # self.modulator2_linear = nn.Identity()
 
     def forward(self, x):
 
@@ -138,14 +138,14 @@ class Receiver(nn.Module):
 
         # Demodulator part
         # input size = (batch_size, 2, n), output size = (batch_size, M2, n)
-        # self.demodulator1 = CNN_block(
-        #     in_channels=2, out_channels=M2, kernel_size=5, num_blocks=3, padding="same"
-        # )
-
-        # ! In order to reproduce Xi's results, we now set the in_channels = 1
         self.demodulator1 = CNN_block(
-            in_channels=1, out_channels=M2, kernel_size=5, num_blocks=3, padding="same"
+            in_channels=2, out_channels=M2, kernel_size=5, num_blocks=1, padding="same"
         )
+
+        # # ! In order to reproduce Xi's results, we now set the in_channels = 1
+        # self.demodulator1 = CNN_block(
+        #     in_channels=1, out_channels=M2, kernel_size=5, num_blocks=3, padding="same"
+        # )
 
         # input size = (batch_size, M2, n), output size = (batch_size, k_mod, n)
         self.demodulator2 = nn.Conv1d(
@@ -164,7 +164,7 @@ class Receiver(nn.Module):
             in_channels=N_prime,
             out_channels=M1,
             kernel_size=5,
-            num_blocks=4,
+            num_blocks=2,
             padding="same",
         )
 
