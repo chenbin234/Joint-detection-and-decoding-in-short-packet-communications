@@ -110,8 +110,8 @@ if __name__ == "__main__":
         model_type="CNN_AutoEncoder",
         description="CNN AutoEncoder with Joint Syncronization, Equalization, and Channel Decoding",
         trainable_parameters=0,
-        epochs=50,
-        training_steps=40,
+        epochs=1,
+        training_steps=2,
         batch_size=500,
         learning_rate=1e-3,
         M1=100,
@@ -132,8 +132,8 @@ if __name__ == "__main__":
         snr_min=2,
         snr_max=20,
         alpha=0.01,  # factor of the sync loss in the total loss
-        train_num_samples_per_epoch=1e5,
-        val_num_samples_per_epoch=1e4,
+        train_num_samples_per_epoch=1e3,
+        val_num_samples_per_epoch=1e3,
         save_model_name=save_model_name,
     )
 
