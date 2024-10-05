@@ -33,34 +33,34 @@ def AWGN_Channel(transmitter_signal, SNR_db):
     # ) / transmitter_signal_std
 
     ## ! Attempt 3 - In order to reproduce Xi's results, we now have transmitter_signal of size (batch_size, 1, n)
-    # calculate the average power of the transmitted signal, which is a real value
-    transmitter_signal_power = calculate_average_power_1d(transmitter_signal)
-
-    # normalise the trasmitter signal to have unit power
-    transmitter_signal_normalized = transmitter_signal / torch.sqrt(transmitter_signal_power)
-
-    # generate the noise
-    noise = torch.randn(transmitter_signal_normalized.shape).to(device) * torch.sqrt(1/SNR)
-
-    # output signal
-    output_signal = transmitter_signal_normalized + noise
-
-    ## ! Attempt 2 - normalising the transmitted signal
-    # calculate the average power of the transmitted signal, which is a real value
-    # transmitter_signal_power = calculate_average_power(transmitter_signal)
+    # # calculate the average power of the transmitted signal, which is a real value
+    # transmitter_signal_power = calculate_average_power_1d(transmitter_signal)
 
     # # normalise the trasmitter signal to have unit power
-    # transmitter_signal_normalized = transmitter_signal / torch.sqrt(
-    #     transmitter_signal_power
-    # )
+    # transmitter_signal_normalized = transmitter_signal / torch.sqrt(transmitter_signal_power)
 
     # # generate the noise
-    # noise = torch.randn(transmitter_signal_normalized.shape).to(device) * torch.sqrt(
-    #     1 / (2 * SNR)
-    # )
+    # noise = torch.randn(transmitter_signal_normalized.shape).to(device) * torch.sqrt(1/SNR)
 
     # # output signal
     # output_signal = transmitter_signal_normalized + noise
+
+    ## ! Attempt 2 - normalising the transmitted signal
+    # calculate the average power of the transmitted signal, which is a real value
+    transmitter_signal_power = calculate_average_power(transmitter_signal)
+
+    # normalise the trasmitter signal to have unit power
+    transmitter_signal_normalized = transmitter_signal / torch.sqrt(
+        transmitter_signal_power
+    )
+
+    # generate the noise
+    noise = torch.randn(transmitter_signal_normalized.shape).to(device) * torch.sqrt(
+        1 / (2 * SNR)
+    )
+
+    # output signal
+    output_signal = transmitter_signal_normalized + noise
 
     ## ! Attempt 1 - not normalising the transmitted signal
     # # Calculate the signal power
@@ -70,7 +70,7 @@ def AWGN_Channel(transmitter_signal, SNR_db):
     # noise_power = signal_power / SNR
 
     # # Generate the noise
-    # noise = torch.randn(transmitter_signal.shape).to(device) * torch.sqrt( 
+    # noise = torch.randn(transmitter_signal.shape).to(device) * torch.sqrt(
     #     2 * noise_power.clone().detach()
     # )
 
@@ -108,7 +108,6 @@ def calculate_average_power(signal):
     return average_power
 
 
-
 def calculate_average_power_1d(signal):
     """
     Calculate the average power of a complex signal.
@@ -129,7 +128,6 @@ def calculate_average_power_1d(signal):
     average_power = average_power_batch.mean()
 
     return average_power
-
 
 
 # Example usage
