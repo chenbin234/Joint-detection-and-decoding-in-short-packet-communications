@@ -100,7 +100,7 @@ if __name__ == "__main__":
         description="try to reproduce Nourhan Hesham's results",
         trainable_parameters=0,
         epochs=100,
-        training_steps=2,
+        training_steps=1,
         batch_size=500,
         learning_rate=1e-3,
         M1=200,
