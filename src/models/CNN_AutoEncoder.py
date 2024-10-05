@@ -133,7 +133,7 @@ class Transmitter(nn.Module):
 
 
 class Receiver(nn.Module):
-    def __init__(self, M1, M2, k_mod, L, N_prime):
+    def __init__(self, M1, M2, k_mod, L, N_prime, k_prime):
         super(Receiver, self).__init__()
 
         # Demodulator part
@@ -168,11 +168,14 @@ class Receiver(nn.Module):
             padding="same",
         )
 
-        # input size = (batch_size, M1, L), output size = (batch_size, 1, k)
+        # input size = (batch_size, M1, L), output size = (batch_size, k_prime, L)
         #! in this case, we set L = k = 64
         self.decoder2 = nn.Conv1d(
-            in_channels=M1, out_channels=1, kernel_size=1, padding="same"
+            in_channels=M1, out_channels=k_prime, kernel_size=1, padding="same"
         )
+        # reshape the tensor (batch_size, k_prime, L) to (batch_size, 1, k)
+        self.reshape_layer2 = ReshapeLayer(1, k_prime * L)
+
         # sigmoid activation function
         self.sigmoid = nn.Sigmoid()
 
@@ -195,17 +198,18 @@ class Receiver(nn.Module):
 
         # input size = (batch_size, M1, L), output size = (batch_size, 1, k)
         x = self.decoder2(x)
+        x = self.reshape_layer2(x)
         x = self.sigmoid(x)
 
         return x
 
 
 class CNN_AutoEncoder(nn.Module):
-    def __init__(self, M1, M2, N_prime, k, L, n, k_mod):
+    def __init__(self, M1, M2, N_prime, k_prime, k, L, n, k_mod):
         super(CNN_AutoEncoder, self).__init__()
 
         self.transmitter = Transmitter(M1, M2, N_prime, k, L, n, k_mod)
-        self.receiver = Receiver(M1, M2, k_mod, L, N_prime)
+        self.receiver = Receiver(M1, M2, k_mod, L, N_prime, k_prime)
 
         # self.channel = AWGN_Channel()
 
